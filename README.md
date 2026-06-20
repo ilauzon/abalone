@@ -7,7 +7,8 @@ Abalone is a marble-based board game in which two players are competing to push 
 ## Building from source
 
 ### Dependencies
-- JDK >= version 21
+- JRE == 21.*
+- JDK >= 21
 
 ### Instructions
 1. In the project's root directory:
@@ -15,7 +16,7 @@ Abalone is a marble-based board game in which two players are competing to push 
 ./gradlew createDistributable
 ```
 
-2. Navigate to `./composeApp/build/compose/binaries/main/app/com.bcit.abalone/` to see the compiled executable `com.bcit.abalone`.
+2. Navigate to `./composeApp/build/compose/binaries/main/app/abalone/` to see the compiled executable `abalone`.
 
 ## Running the game program
 To play a game of Abalone against the AI, first compile the project, and run the resulting executable.
@@ -26,9 +27,9 @@ To play a game of Abalone against the AI, first compile the project, and run the
 ## Running the state space generator
 The executable includes a standalone state space generator to test that the bot is working correctly.
 
-1. From the project root, navigate to `./composeApp/build/compose/binaries/main/app/com.bcit.abalone/`
+1. From the project root, navigate to `./composeApp/build/compose/binaries/main/app/abalone/`
 2. Put any testing `.input` files to be run inside that folder.
-3. Run `com.bcit.abalone`.
+3. Run `abalone`.
 4. Click the "Go to State Space Generator" button.
 5. Click on the file you want to choose then click the "Enter" button.
 6. The output files wil be generated in the same folder as the executable.
