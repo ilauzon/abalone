@@ -1,6 +1,5 @@
 package abalone.model
 
-import abalone.Piece
 import abalone.model.LetterCoordinate as LetterC
 import abalone.model.NumberCoordinate as NumberC
 
@@ -40,7 +39,7 @@ class StateRepresentation(
     }
 
     fun movesRemaining(colour: Piece): Int =
-        when(colour) {
+        when (colour) {
             Piece.Black -> movesRemaining / 2
             Piece.White -> movesRemaining / 2 + if (movesRemaining % 2 == 0) 0 else 1
             Piece.Empty -> throw IllegalArgumentException("Piece.Empty does not have moves.")
@@ -99,7 +98,7 @@ class BoardState {
     val cells: BoardMap
 
     constructor() {
-       cells = BoardMap()
+        cells = BoardMap()
     }
 
     constructor(layout: Layout) {
@@ -154,48 +153,48 @@ class BoardState {
         private fun generateStandardLayout(): Map<Coordinate, Piece> {
             val board = HashMap<Coordinate, Piece>()
             fillBoardWithEmpty(board)
-            fillBoardLetter(board, LetterC.A, Piece.Black, LetterC.A.min .. LetterC.A.max)
-            fillBoardLetter(board, LetterC.B, Piece.Black, LetterC.B.min .. LetterC.B.max)
-            fillBoardLetter(board, LetterC.C, Piece.Black, LetterC.C.min + 2 .. LetterC.C.max - 2)
-            fillBoardLetter(board, LetterC.G, Piece.White, LetterC.G.min + 2 .. LetterC.G.max - 2)
-            fillBoardLetter(board, LetterC.H, Piece.White, LetterC.H.min .. LetterC.H.max)
-            fillBoardLetter(board, LetterC.I, Piece.White, LetterC.I.min .. LetterC.I.max)
+            fillBoardLetter(board, LetterC.A, Piece.Black, LetterC.A.min..LetterC.A.max)
+            fillBoardLetter(board, LetterC.B, Piece.Black, LetterC.B.min..LetterC.B.max)
+            fillBoardLetter(board, LetterC.C, Piece.Black, LetterC.C.min + 2..LetterC.C.max - 2)
+            fillBoardLetter(board, LetterC.G, Piece.White, LetterC.G.min + 2..LetterC.G.max - 2)
+            fillBoardLetter(board, LetterC.H, Piece.White, LetterC.H.min..LetterC.H.max)
+            fillBoardLetter(board, LetterC.I, Piece.White, LetterC.I.min..LetterC.I.max)
             return board
         }
 
         private fun generateBelgianDaisyLayout(): Map<Coordinate, Piece> {
             val board = HashMap<Coordinate, Piece>()
             fillBoardWithEmpty(board)
-            fillBoardLetter(board, LetterC.A, Piece.Black, LetterC.A.min .. LetterC.A.min + 1)
-            fillBoardLetter(board, LetterC.B, Piece.Black, LetterC.B.min .. LetterC.B.min + 2)
-            fillBoardLetter(board, LetterC.C, Piece.Black, LetterC.C.min + 1 .. LetterC.C.min + 2)
-            fillBoardLetter(board, LetterC.A, Piece.White, LetterC.A.max - 1 .. LetterC.A.max)
-            fillBoardLetter(board, LetterC.B, Piece.White, LetterC.B.max - 2 .. LetterC.B.max)
-            fillBoardLetter(board, LetterC.C, Piece.White, LetterC.C.max - 2 .. LetterC.C.max - 1)
-            fillBoardLetter(board, LetterC.G, Piece.White, LetterC.G.min + 1 .. LetterC.G.min + 2)
-            fillBoardLetter(board, LetterC.H, Piece.White, LetterC.H.min .. LetterC.H.min + 2)
-            fillBoardLetter(board, LetterC.I, Piece.White, LetterC.I.min .. LetterC.I.min + 1)
-            fillBoardLetter(board, LetterC.G, Piece.Black, LetterC.G.max - 2 .. LetterC.G.max - 1)
-            fillBoardLetter(board, LetterC.H, Piece.Black, LetterC.H.max - 2 .. LetterC.H.max)
-            fillBoardLetter(board, LetterC.I, Piece.Black, LetterC.I.max - 1 .. LetterC.I.max)
+            fillBoardLetter(board, LetterC.A, Piece.Black, LetterC.A.min..LetterC.A.min + 1)
+            fillBoardLetter(board, LetterC.B, Piece.Black, LetterC.B.min..LetterC.B.min + 2)
+            fillBoardLetter(board, LetterC.C, Piece.Black, LetterC.C.min + 1..LetterC.C.min + 2)
+            fillBoardLetter(board, LetterC.A, Piece.White, LetterC.A.max - 1..LetterC.A.max)
+            fillBoardLetter(board, LetterC.B, Piece.White, LetterC.B.max - 2..LetterC.B.max)
+            fillBoardLetter(board, LetterC.C, Piece.White, LetterC.C.max - 2..LetterC.C.max - 1)
+            fillBoardLetter(board, LetterC.G, Piece.White, LetterC.G.min + 1..LetterC.G.min + 2)
+            fillBoardLetter(board, LetterC.H, Piece.White, LetterC.H.min..LetterC.H.min + 2)
+            fillBoardLetter(board, LetterC.I, Piece.White, LetterC.I.min..LetterC.I.min + 1)
+            fillBoardLetter(board, LetterC.G, Piece.Black, LetterC.G.max - 2..LetterC.G.max - 1)
+            fillBoardLetter(board, LetterC.H, Piece.Black, LetterC.H.max - 2..LetterC.H.max)
+            fillBoardLetter(board, LetterC.I, Piece.Black, LetterC.I.max - 1..LetterC.I.max)
             return board
         }
 
         private fun generateGermanDaisyLayout(): Map<Coordinate, Piece> {
             val board = HashMap<Coordinate, Piece>()
             fillBoardWithEmpty(board)
-            fillBoardLetter(board, LetterC.B, Piece.Black, LetterC.B.min .. LetterC.B.min + 1)
-            fillBoardLetter(board, LetterC.C, Piece.Black, LetterC.C.min .. LetterC.C.min + 2)
-            fillBoardLetter(board, LetterC.D, Piece.Black, LetterC.D.min + 1 .. LetterC.D.min + 2)
-            fillBoardLetter(board, LetterC.B, Piece.White, LetterC.B.max - 1 .. LetterC.B.max)
-            fillBoardLetter(board, LetterC.C, Piece.White, LetterC.C.max - 2 .. LetterC.C.max)
-            fillBoardLetter(board, LetterC.D, Piece.White, LetterC.D.max - 2 .. LetterC.D.max - 1)
-            fillBoardLetter(board, LetterC.H, Piece.White, LetterC.H.min .. LetterC.H.min + 1)
-            fillBoardLetter(board, LetterC.G, Piece.White, LetterC.G.min .. LetterC.G.min + 2)
-            fillBoardLetter(board, LetterC.F, Piece.White, LetterC.F.min + 1 .. LetterC.F.min + 2)
-            fillBoardLetter(board, LetterC.H, Piece.Black, LetterC.H.max - 1 .. LetterC.H.max)
-            fillBoardLetter(board, LetterC.G, Piece.Black, LetterC.G.max - 2 .. LetterC.G.max)
-            fillBoardLetter(board, LetterC.F, Piece.Black, LetterC.F.max -2 .. LetterC.F.max - 1)
+            fillBoardLetter(board, LetterC.B, Piece.Black, LetterC.B.min..LetterC.B.min + 1)
+            fillBoardLetter(board, LetterC.C, Piece.Black, LetterC.C.min..LetterC.C.min + 2)
+            fillBoardLetter(board, LetterC.D, Piece.Black, LetterC.D.min + 1..LetterC.D.min + 2)
+            fillBoardLetter(board, LetterC.B, Piece.White, LetterC.B.max - 1..LetterC.B.max)
+            fillBoardLetter(board, LetterC.C, Piece.White, LetterC.C.max - 2..LetterC.C.max)
+            fillBoardLetter(board, LetterC.D, Piece.White, LetterC.D.max - 2..LetterC.D.max - 1)
+            fillBoardLetter(board, LetterC.H, Piece.White, LetterC.H.min..LetterC.H.min + 1)
+            fillBoardLetter(board, LetterC.G, Piece.White, LetterC.G.min..LetterC.G.min + 2)
+            fillBoardLetter(board, LetterC.F, Piece.White, LetterC.F.min + 1..LetterC.F.min + 2)
+            fillBoardLetter(board, LetterC.H, Piece.Black, LetterC.H.max - 1..LetterC.H.max)
+            fillBoardLetter(board, LetterC.G, Piece.Black, LetterC.G.max - 2..LetterC.G.max)
+            fillBoardLetter(board, LetterC.F, Piece.Black, LetterC.F.max - 2..LetterC.F.max - 1)
             return board
         }
     }
@@ -207,8 +206,8 @@ class BoardState {
     }
 
     override fun toString(): String {
-        val letterRowToString = {letter: LetterC ->
-            (letter.min .. letter.max).joinToString(
+        val letterRowToString = { letter: LetterC ->
+            (letter.min..letter.max).joinToString(
                 separator = ",",
                 prefix = "[",
                 postfix = "]",
@@ -241,18 +240,18 @@ class BoardState {
     }
 
     fun toStringPretty(): String {
-        val letterRowToString = {letter: LetterC ->
+        val letterRowToString = { letter: LetterC ->
             val prefix = when (letter) {
-                in LetterC.F .. LetterC.I -> " "
-                in LetterC.A .. LetterC.D -> " "
+                in LetterC.F..LetterC.I -> " "
+                in LetterC.A..LetterC.D -> " "
                 else -> " "
             }
             val postfix = when (letter) {
-                in LetterC.F .. LetterC.I -> " "
-                in LetterC.A .. LetterC.D -> " "
+                in LetterC.F..LetterC.I -> " "
+                in LetterC.A..LetterC.D -> " "
                 else -> " "
             }
-            (letter.min .. letter.max).joinToString(
+            (letter.min..letter.max).joinToString(
                 separator = " ",
                 prefix = prefix,
                 postfix = postfix,

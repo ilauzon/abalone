@@ -1,6 +1,6 @@
 package abalone.model.search
 
-import abalone.Piece
+import abalone.model.Piece
 import abalone.model.Action
 import abalone.model.BoardMap
 import java.util.LinkedHashMap
@@ -11,7 +11,7 @@ import kotlin.random.Random
  *
  * Source: https://medium.com/@fasilt/understanding-lru-least-recently-used-cache-in-kotlin-b54c7060e752
  */
-class TranspositionTable (
+class TranspositionTable(
     private val capacity: Int
 ) : LinkedHashMap<TranspositionTable.Key, TranspositionTable.Entry>(
     capacity,
@@ -28,7 +28,7 @@ class TranspositionTable (
         }
         try {
             return super.put(key, value)
-        } catch(e: ClassCastException) {
+        } catch (e: ClassCastException) {
             println("ERROR: $e")
             return null
         }
@@ -88,5 +88,5 @@ class TranspositionTable (
         val value: Double,
         val action: Action,
         val depth: Int,
-        )
+    )
 }

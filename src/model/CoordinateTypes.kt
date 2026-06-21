@@ -45,7 +45,7 @@ class Coordinate private constructor(val letter: LetterCoordinate, val number: N
          */
         init {
             for (l: LetterCoordinate in LetterCoordinate.entries) {
-                for (n: NumberCoordinate in l.min .. l.max) {
+                for (n: NumberCoordinate in l.min..l.max) {
                     val coord = Coordinate(l, n)
                     val pos = hash(l, n)
                     coordinates[pos] = coord
@@ -126,7 +126,7 @@ class Coordinate private constructor(val letter: LetterCoordinate, val number: N
     }
 
     private fun initMove(direction: MoveDirection): Coordinate {
-        val newCoordinate = when(direction) {
+        val newCoordinate = when (direction) {
             MoveDirection.PosX -> moveX(true)
             MoveDirection.NegX -> moveX(false)
             MoveDirection.PosY -> moveY(true)
@@ -206,8 +206,10 @@ enum class NumberCoordinate {
 
     /** The minimum letter value of this line. */
     val min: LetterCoordinate get() = minMaxMapping[this]!!.first
+
     /** The maximum letter value of this line. */
     val max: LetterCoordinate get() = minMaxMapping[this]!!.second
+
     companion object {
         private val minMaxMapping = hashMapOf(
             NULL to (LetterCoordinate.NULL to LetterCoordinate.NULL),
@@ -250,12 +252,12 @@ enum class NumberCoordinate {
     }
 
     operator fun rangeTo(that: NumberCoordinate): Iterable<NumberCoordinate> {
-        val newRange = (this.ordinal .. that.ordinal).map { enumValues<NumberCoordinate>()[it] }
+        val newRange = (this.ordinal..that.ordinal).map { enumValues<NumberCoordinate>()[it] }
         return newRange.asIterable()
     }
 
     infix fun downTo(that: NumberCoordinate): Iterable<NumberCoordinate> {
-        val newRange = (this.ordinal downTo  that.ordinal).map { enumValues<NumberCoordinate>()[it] }
+        val newRange = (this.ordinal downTo that.ordinal).map { enumValues<NumberCoordinate>()[it] }
         return newRange.asIterable()
     }
 
@@ -271,8 +273,10 @@ enum class LetterCoordinate {
 
     /** The minimum number value of this line. */
     val min: NumberCoordinate get() = minMaxMapping[this]!!.first
-    /** The minimum number value of this line. */
+
+    /** The maximum number value of this line. */
     val max: NumberCoordinate get() = minMaxMapping[this]!!.second
+
     companion object {
         private val minMaxMapping = hashMapOf(
             NULL to (NumberCoordinate.NULL to NumberCoordinate.NULL),
@@ -286,6 +290,7 @@ enum class LetterCoordinate {
             H to (NumberCoordinate.FOUR to NumberCoordinate.NINE),
             I to (NumberCoordinate.FIVE to NumberCoordinate.NINE),
         )
+
         fun convertLetter(letter: String): LetterCoordinate {
             val letterCoordinate = when (letter) {
                 "A" -> A
@@ -314,12 +319,12 @@ enum class LetterCoordinate {
     }
 
     operator fun rangeTo(that: LetterCoordinate): Iterable<LetterCoordinate> {
-        val newRange = (this.ordinal .. that.ordinal).map { enumValues<LetterCoordinate>()[it] }
+        val newRange = (this.ordinal..that.ordinal).map { enumValues<LetterCoordinate>()[it] }
         return newRange.asIterable()
     }
 
     infix fun downTo(that: LetterCoordinate): Iterable<LetterCoordinate> {
-        val newRange = (this.ordinal downTo  that.ordinal).map { enumValues<LetterCoordinate>()[it] }
+        val newRange = (this.ordinal downTo that.ordinal).map { enumValues<LetterCoordinate>()[it] }
         return newRange.asIterable()
     }
 

@@ -1,6 +1,5 @@
 package abalone.model
 
-import abalone.Piece
 import kotlin.random.Random
 import abalone.model.LetterCoordinate as L
 import abalone.model.NumberCoordinate as N
@@ -18,7 +17,8 @@ class BoardMap : Map<Coordinate, Piece> {
         private val setupKeys: MutableSet<Coordinate> = mutableSetOf()
         private val refKeys: Set<Coordinate>
         private val rand = Random(0)
-        private val zobristTable: Array<Array<Int>> = Array( L.I.ordinal * 16 + N.NINE.ordinal + 1) { Array(4, {rand.nextInt()}) }
+        private val zobristTable: Array<Array<Int>> =
+            Array(L.I.ordinal * 16 + N.NINE.ordinal + 1) { Array(4, { rand.nextInt() }) }
         private val pieceMapping = arrayOf(
             Piece.Empty,
             Piece.Black,
@@ -47,7 +47,7 @@ class BoardMap : Map<Coordinate, Piece> {
     private val data: ByteArray
 
     constructor() {
-       data = ByteArray(zobristTable.size)
+        data = ByteArray(zobristTable.size)
     }
 
     /**

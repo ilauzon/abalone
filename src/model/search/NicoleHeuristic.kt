@@ -1,6 +1,6 @@
 package abalone.model.search
 
-import abalone.Piece
+import abalone.model.Piece
 import abalone.model.LetterCoordinate
 import abalone.model.NumberCoordinate
 import abalone.model.StateRepresentation
@@ -15,7 +15,7 @@ import abalone.model.StateRepresentation
  * The final value is the player's score minus the opposition's score.
  *
  */
-class NicoleHeuristic:Heuristic {
+class NicoleHeuristic : Heuristic {
 
     // Define the center of the board
     private val center = Pair(LetterCoordinate.E, NumberCoordinate.FIVE)

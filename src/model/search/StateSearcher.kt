@@ -1,6 +1,6 @@
 package abalone.model.search
 
-import abalone.Piece
+import abalone.model.Piece
 import abalone.model.Action
 import abalone.model.StateRepresentation
 import abalone.model.StateSpaceGenerator.Companion.actions
@@ -27,8 +27,10 @@ class StateSearcher(private val heuristic: Heuristic) {
     companion object {
         /** The maximum time per move, in milliseconds. */
         private const val MAX_MOVE_TIME = 5000
+
         /** The iterative deepening increased depth per iteration. */
         private const val DEPTH_STEP = 1
+
         /** The starting depth of search. */
         private const val STARTING_DEPTH = 1
     }
@@ -101,7 +103,7 @@ class StateSearcher(private val heuristic: Heuristic) {
 
     /**
      * A search task for a single thread. The threading solution is based on the [Simplified ABDADA
-     algorithm by Tom Kerrigan](http://www.tckerrigan.com/Chess/Parallel_Search/Simplified_ABDADA/).
+    algorithm by Tom Kerrigan](http://www.tckerrigan.com/Chess/Parallel_Search/Simplified_ABDADA/).
      */
     private fun threadSearch(state: StateRepresentation, depth: Int): Pair<Int?, Action?> {
         val currentPlayer = toMove(state)
@@ -144,8 +146,8 @@ class StateSearcher(private val heuristic: Heuristic) {
      */
     fun terminalTest(state: StateRepresentation): Boolean {
         return state.players[state.currentPlayer]!!.score >= 6
-            || state.players[state.currentPlayer.opposite()]!!.score >= 6
-            || state.movesRemaining <= 0
+                || state.players[state.currentPlayer.opposite()]!!.score >= 6
+                || state.movesRemaining <= 0
     }
 
     /**
@@ -162,7 +164,14 @@ class StateSearcher(private val heuristic: Heuristic) {
      * @param depth the depth to search to.
      * @return the estimated utility of the given state.
      */
-    private fun value(isMax: Boolean, state: StateRepresentation, a: Double, b: Double, depth: Int, context: Context): Double {
+    private fun value(
+        isMax: Boolean,
+        state: StateRepresentation,
+        a: Double,
+        b: Double,
+        depth: Int,
+        context: Context
+    ): Double {
         if (depth <= 0 || terminalTest(state)) {
             return eval(state)
         }
@@ -275,7 +284,8 @@ class StateSearcher(private val heuristic: Heuristic) {
     private fun cacheState(state: StateRepresentation, action: Action, value: Double, depth: Int) {
         cache[TranspositionTable.Key(
             state.board.cells,
-            state.currentPlayer)] = TranspositionTable.Entry(value, action, depth)
+            state.currentPlayer
+        )] = TranspositionTable.Entry(value, action, depth)
     }
 
     private fun getCachedState(state: StateRepresentation, depth: Int): TranspositionTable.Entry? {

@@ -1,8 +1,9 @@
-package abalone
+package abalone.model
 
 enum class Piece {
     Empty, Black, White, OffBoard;
-    fun opposite() = when(this) {
+
+    fun opposite() = when (this) {
         Empty -> Empty
         Black -> White
         White -> Black

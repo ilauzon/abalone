@@ -1,13 +1,12 @@
 package abalone.model.search
 
-import abalone.Piece
 import abalone.model.*
 import kotlin.math.abs
 
 /**
  * Isaac's heuristic function implementation.
  */
-class IsaacHeuristic: Heuristic {
+class IsaacHeuristic : Heuristic {
 
     /**
      * Based on the ABLA agent, described in

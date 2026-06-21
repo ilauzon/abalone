@@ -1,7 +1,5 @@
 package abalone.model
 
-import abalone.AbaloneViewModel
-import abalone.Piece
 import java.io.File
 import java.util.Date
 
@@ -34,7 +32,7 @@ class AbaloneFileIO private constructor() {
          * @param path a string
          * @return file contents as a string
          */
-        fun readDataFile(path: String): List<String>{
+        fun readDataFile(path: String): List<String> {
             val text = File(path).readLines()
             return text
         }
@@ -85,11 +83,12 @@ class AbaloneFileIO private constructor() {
                     boardList.add("$coordinate$piece")
                 }
             }
-            boardList =  boardList.sortedWith(compareBy(
-                { it[2] },
-                { it[0] },
-                { it[1].digitToInt() }
-            )).toMutableList()
+            boardList = boardList.sortedWith(
+                compareBy(
+                    { it[2] },
+                    { it[0] },
+                    { it[1].digitToInt() }
+                )).toMutableList()
             val boardString = boardList.joinToString(",")
             return boardString
         }
@@ -128,30 +127,6 @@ class AbaloneFileIO private constructor() {
             val stringActions: MutableList<String> = mutableListOf()
             actions.forEach {
                 stringActions.add(stringifyAction(it))
-            }
-            return stringActions
-        }
-
-        /**
-         * Returns the move as a string
-         *
-         * @param move a MoveRecord object
-         * @return move as a string
-         */
-        fun stringifyMove(move: AbaloneViewModel.MoveRecord): String {
-            return move.movePath
-        }
-
-        /**
-         * Returns the given list of moves as a list of strings.
-         *
-         * @param moves List<MoveRecord>
-         * @return actions as a List<String>
-         */
-        fun stringifyMoves(moves: List<AbaloneViewModel.MoveRecord>): List<String> {
-            val stringActions: MutableList<String> = mutableListOf()
-            moves.forEach {
-                stringActions.add(stringifyMove(it))
             }
             return stringActions
         }

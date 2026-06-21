@@ -1,6 +1,6 @@
 package abalone.model.search
 
-import abalone.Piece
+import abalone.model.Piece
 import abalone.model.BoardState
 import abalone.model.Coordinate
 import abalone.model.LetterCoordinate
@@ -101,11 +101,13 @@ class CarolHeuristic : Heuristic {
             "centerDistanceWeight" to 0.5,
             "edgePenaltyWeight" to 0.2
         )
+
         movesLeft > 15 -> mapOf(
             "pieceCountWeight" to 0.4,
             "centerDistanceWeight" to 0.4,
             "edgePenaltyWeight" to 0.2
         )
+
         else -> mapOf(
             "pieceCountWeight" to 0.6,
             "centerDistanceWeight" to 0.3,
