@@ -197,7 +197,6 @@ fun main() {
         var inputStr = ""
 
         section {
-            black(layer = BG)
             textLine(game.toStringPretty(black = 'O', white = '@'))
             if (!botTurn) {
                 blue {

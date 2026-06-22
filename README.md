@@ -13,8 +13,11 @@ Abalone is a marble-based board game in which two players are competing to push 
 ### Instructions
 
 To create a fat JAR:
-```
-./gradlew packageUberJarForCurrentOS
+```sh
+./gradlew shadowJar
 ```
 
-Run the resulting JAR in `build/compose/jars` with `java -jar <name of jar>`.
+Run the resulting JAR: 
+```sh
+java -jar ./build/libs/abalone-all.jar
+```
