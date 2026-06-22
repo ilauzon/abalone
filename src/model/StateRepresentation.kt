@@ -60,14 +60,21 @@ class StateRepresentation(
         """.trimIndent() + board
     }
 
-    fun toStringPretty(): String {
+    /**
+     * Pretty-print the game state.
+     * @param black The character for black marbles.
+     * @param white The character for white marbles.
+     *
+     * @return The string representation of the game state.
+     */
+    fun toStringPretty(black: Char = '◯', white: Char = '◉'): String {
         val bl = players[Piece.Black]!!
         val wh = players[Piece.White]!!
         return """
-        Black (◯): score = ${bl.score}, moves left = ${movesRemaining(Piece.Black)}, move time = ${bl.moveTime}
-        White (◉): score = ${wh.score}, moves left = ${movesRemaining(Piece.White)}, move time = ${wh.moveTime}
+        Black (${black}): score = ${bl.score}, moves left = ${movesRemaining(Piece.Black)}, move time = ${bl.moveTime}
+        White (${white}): score = ${wh.score}, moves left = ${movesRemaining(Piece.White)}, move time = ${wh.moveTime}
         
-        """.trimIndent() + board.toStringPretty()
+        """.trimIndent() + board.toStringPretty(black = black, white = white)
     }
 
     override fun equals(other: Any?): Boolean {
@@ -239,7 +246,14 @@ class BoardState {
         return returnString
     }
 
-    fun toStringPretty(): String {
+    /**
+     * Pretty-print the board.
+     * @param black The character for black marbles.
+     * @param white The character for white marbles.
+     *
+     * @return The string representation of the board.
+     */
+    fun toStringPretty(black: Char = '◯', white: Char = '◉'): String {
         val letterRowToString = { letter: LetterC ->
             val prefix = when (letter) {
                 in LetterC.F..LetterC.I -> " "
@@ -259,8 +273,8 @@ class BoardState {
                     val piece = cells[Coordinate.get(letter, it)]
                     when (piece) {
                         Piece.Empty -> "∙"
-                        Piece.Black -> "◯"
-                        Piece.White -> "◉"
+                        Piece.Black -> black.toString()
+                        Piece.White -> white.toString()
                         Piece.OffBoard -> " "
                     }
                 }
