@@ -8,6 +8,8 @@ import com.varabyte.kotter.runtime.render.*
 import com.varabyte.kotter.runtime.terminal.TerminalSize
 import com.varabyte.kotter.terminal.system.*
 import com.varabyte.kotter.terminal.virtual.*
+import com.varabyte.kotterx.grid.*
+import com.varabyte.kotterx.text.*
 import kotlin.random.Random
 import abalone.model.*
 import abalone.model.search.*
@@ -15,9 +17,18 @@ import abalone.model.search.*
 private const val WIDTH = 60
 private const val HEIGHT = 20
 
+private const val botGoesFirst = true
+private val botPiece = if (botGoesFirst) Piece.Black else Piece.White
+private val humanPiece = if (botGoesFirst) Piece.White else Piece.Black
+
 fun RenderScope.blackMarble() = green { text('◯') }
 fun RenderScope.whiteMarble() = green { text('◉') }
 fun RenderScope.emptySpot() = green { text('∙') }
+
+fun RenderScope.humanColour(scopedBlock: RenderScope.() -> Unit) = blue { scopedBlock() }
+fun RenderScope.botColour(scopedBlock: RenderScope.() -> Unit) = green { scopedBlock() }
+fun RenderScope.boardColour(scopedBlock: RenderScope.() -> Unit) = white { scopedBlock() }
+fun RenderScope.highlightedColour(scopedBlock: RenderScope.() -> Unit) = blue(layer = BG) { scopedBlock() }
 
 fun isLetter(c: Char): Boolean {
     return LetterCoordinate.convertLetter(c.toString()) != LetterCoordinate.NULL
@@ -104,15 +115,6 @@ fun getMatchingSuggestions(
     state: StateRepresentation,
     parsed: ParseResult
 ): List<String> {
-    if (parsed.moveDirection != null && parsed.fragment == null) {
-        var strRep = ""
-        for (coordinate in parsed.coordinates) {
-            strRep += coordinate.toString()
-        }
-        strRep += parsed.moveDirection.toString()
-        return listOf(strRep)
-    }
-
     val suggestions = mutableSetOf<String>()
     val actions = StateSpaceGenerator.actions(state)
     val board = state.board.cells
@@ -128,7 +130,12 @@ fun getMatchingSuggestions(
                     )
                 }
                 if (parsed.coordinates.containsAll(playerCoords)) {
-                    suggestions.add(action.direction.toString())
+                    if (parsed.moveDirection == action.direction) {
+                        suggestions.add("[Enter] to make move")
+                        break
+                    } else {
+                        suggestions.add(action.direction.toString())
+                    }
                 }
             }
         } else if (isLetter(parsed.fragment)) {
@@ -172,6 +179,94 @@ fun getMove(state: StateRepresentation, str: String): Action? {
     return null
 }
 
+fun RenderScope.drawBoard(
+    game: StateRepresentation,
+    selectedLetters: Set<Char> = setOf(),
+    selectedNumbers: Set<Char> = setOf()
+) {
+
+    fun RenderScope.letterRowToString(letter: LetterCoordinate) {
+        val prefix = when (letter) {
+            in LetterCoordinate.F..LetterCoordinate.I -> " "
+            in LetterCoordinate.A..LetterCoordinate.D -> " "
+            else -> " "
+        }
+        val postfix = when (letter) {
+            in LetterCoordinate.F..LetterCoordinate.I -> " "
+            in LetterCoordinate.A..LetterCoordinate.D -> " "
+            else -> " "
+        }
+        for (l in letter.min..letter.max) {
+            val piece = game.board.cells[Coordinate.get(letter, l)]
+            when (piece) {
+                Piece.Empty -> {
+                    text('∙')
+                }
+
+                Piece.Black -> {
+                    if (botPiece == Piece.Black) {
+                        botColour {
+                            text('O')
+                        }
+                    } else {
+                        humanColour {
+                            text('O')
+                        }
+                    }
+                }
+
+                Piece.White -> {
+                    if (botPiece == Piece.White) {
+                        botColour {
+                            text('@')
+                        }
+                    } else {
+                        humanColour {
+                            text('@')
+                        }
+                    }
+                }
+
+                Piece.OffBoard -> {
+                    text(' ')
+                }
+            }
+            text(' ')
+        }
+    }
+
+    fun RenderScope.number(c: Char) {
+        if (selectedNumbers.contains(c)) {
+            highlightedColour { text(c) }
+        } else {
+            boardColour { text(c) }
+        }
+    }
+
+    fun RenderScope.letter(c: Char) {
+        if (selectedLetters.contains(c)) {
+            highlightedColour { text(c) }
+        } else {
+            boardColour { text(c) }
+        }
+    }
+
+    text("    "); letter('I'); text(' '); letterRowToString(LetterCoordinate.I); textLine()
+    text("   "); letter('H'); text(' '); letterRowToString(LetterCoordinate.H); textLine()
+    text("  "); letter('G'); text(' '); letterRowToString(LetterCoordinate.G); textLine()
+    text(" "); letter('F'); text(' '); letterRowToString(LetterCoordinate.F); textLine()
+    text(""); letter('E'); text(' '); letterRowToString(LetterCoordinate.E); textLine()
+    text(" "); letter('D'); text(' '); letterRowToString(LetterCoordinate.D); number('9'); textLine()
+    text("  "); letter('C'); text(' '); letterRowToString(LetterCoordinate.C); number('8'); textLine()
+    text("   "); letter('B'); text(' '); letterRowToString(LetterCoordinate.B); number('7'); textLine()
+    text("    "); letter('A'); text(' '); letterRowToString(LetterCoordinate.A); number('6'); textLine()
+    text("     "); text("  "); number('1'); text(' '); number('2'); text(' '); number('3'); text(' '); number('4'); text(
+        ' '
+    ); number(
+        '5'
+    )
+}
+
 fun main() {
     session(
         terminal = listOf(
@@ -189,7 +284,7 @@ fun main() {
         val maxDepth = 5
         val bot = StateSearcher(IsaacHeuristic())
         var status = ""
-        var botTurn = true
+        var botTurn = botGoesFirst
         var firstMove = true
         var gameOver = false
         var suggestions = listOf<String>()
@@ -197,25 +292,38 @@ fun main() {
         var inputStr = ""
 
         section {
-            textLine(game.toStringPretty(black = 'O', white = '@'))
-            if (!botTurn) {
-                blue {
-                    text("Your move: ")
-                    textLine(inputStr)
-                    green {
-                        suggestions.forEach {
-                            textLine("    $it")
-                        }
+            grid(Cols { fit(); fit() }) {
+                cell {
+                    drawBoard(game)
+                }
+                cell {
+                    botColour {
+                        textLine("Bot score: ${game.players[botPiece]!!.score}")
+                    }
+                    humanColour {
+                        textLine("Human score: ${game.players[humanPiece]!!.score}")
                     }
                 }
-            } else {
-                textLine("Bot moving...")
+                cell(row = 1, colSpan = 2) {
+                    if (!botTurn) {
+                        text("Your move: ")
+                        textLine(inputStr)
+                        humanColour {
+                            textLine()
+                            suggestions.forEach {
+                                text("    $it")
+                            }
+                        }
+                    } else {
+                        botColour {
+                            textLine("Bot moving...")
+                        }
+                    }
+                    green {
+                        textLine(status)
+                    }
+                }
             }
-
-            green {
-                textLine(status)
-            }
-
         }.runUntilSignal {
             var playerAction: Action? = null
 
@@ -236,7 +344,9 @@ fun main() {
                             inputStr = inputStr.dropLast(1)
                             str = inputStr
                         } else {
-                            str = inputStr + key.toString().uppercase()
+                            var k = key
+                            if (key == Keys.Equals) k = Keys.Plus
+                            str = inputStr + k.toString().uppercase()
                         }
                         val retrievedSuggestions = getSuggestions(game, str)
                         if (!retrievedSuggestions.isEmpty()) {
@@ -264,7 +374,7 @@ fun main() {
                     botTurn = !botTurn
                     inputStr = ""
                     suggestions = getSuggestions(game, inputStr)
-                } else if (playerAction != null) {
+                } else if (playerAction != null) { // the timer waits here in a hot loop until the user enters a move
                     try {
                         newGameState = StateSpaceGenerator.result(game, playerAction!!)
                         game = newGameState
