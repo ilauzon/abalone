@@ -156,6 +156,22 @@ fun getSuggestions(state: StateRepresentation, str: String): List<String> {
     return getMatchingSuggestions(state, parsed)
 }
 
+fun getMove(state: StateRepresentation, str: String): Action? {
+    val parsed = parseMove(str) ?: return null
+    val board = state.board.cells
+    for (action in StateSpaceGenerator.actions(state)) {
+        if (action.coordinates
+                .filter { board[it] == state.currentPlayer }
+                .toSet() == parsed.coordinates.toSet()
+            && action.direction == parsed.moveDirection
+            && parsed.fragment == null
+        ) {
+            return action
+        }
+    }
+    return null
+}
+
 fun main() {
     session(
         terminal = listOf(
@@ -172,12 +188,13 @@ fun main() {
         )
         val maxDepth = 5
         val bot = StateSearcher(IsaacHeuristic())
-        val key = Any()
         var status = ""
         var botTurn = true
         var firstMove = true
         var gameOver = false
         var suggestions = listOf<String>()
+        var timerKey = Any()
+        var inputStr = ""
 
         section {
             black(layer = BG)
@@ -185,11 +202,10 @@ fun main() {
             if (!botTurn) {
                 blue {
                     text("Your move: ")
-                    input()
-                    textLine()
+                    textLine(inputStr)
                     green {
                         suggestions.forEach {
-                            textLine("      $it")
+                            textLine("    $it")
                         }
                     }
                 }
@@ -201,40 +217,64 @@ fun main() {
                 textLine(status)
             }
 
-        }.runUntilKeyPressed(Keys.Q) {
+        }.runUntilSignal {
             var playerAction: Action? = null
 
-            onInputChanged {
-                input = input.uppercase()
+            onKeyPressed {
+                when (key) {
+                    Keys.Enter -> {
+                        val move = getMove(game, inputStr)
+                        if (move != null) {
+                            playerAction = move
+                        }
+                    }
 
-                val retrievedSuggestions = getSuggestions(game, input)
-                if (retrievedSuggestions.isEmpty()) {
-                    rejectInput()
-                } else {
-                    suggestions = retrievedSuggestions
-                    rerender()
+                    Keys.Q -> signal()
+
+                    else -> {
+                        val str: String
+                        if (key == Keys.Backspace) {
+                            inputStr = inputStr.dropLast(1)
+                            str = inputStr
+                        } else {
+                            str = inputStr + key.toString().uppercase()
+                        }
+                        val retrievedSuggestions = getSuggestions(game, str)
+                        if (!retrievedSuggestions.isEmpty()) {
+                            suggestions = retrievedSuggestions
+                            inputStr = str
+                        }
+                    }
                 }
+                rerender()
             }
 
-            addTimer(Anim.ONE_FRAME_60FPS, repeat = true, key = key) {
+            addTimer(Anim.ONE_FRAME_60FPS, repeat = true, key = timerKey) {
                 var newGameState: StateRepresentation? = null
+
                 if (botTurn) {
-                    botTurn = false
+                    rerender()
                     try {
                         val botAction = bot.search(game, maxDepth, firstMove)
-                        firstMove = false
                         newGameState = StateSpaceGenerator.result(game, botAction)
+                        game = newGameState
                     } catch (e: IllegalArgumentException) {
                         gameOver = true
                     }
-                } else {
-                    if (playerAction != null) {
-                        newGameState = StateSpaceGenerator.result(game, playerAction)
+                    firstMove = false
+                    botTurn = !botTurn
+                    inputStr = ""
+                    suggestions = getSuggestions(game, inputStr)
+                } else if (playerAction != null) {
+                    try {
+                        newGameState = StateSpaceGenerator.result(game, playerAction!!)
+                        game = newGameState
+                    } catch (e: IllegalArgumentException) {
+                        gameOver = true
                     }
-                }
-                if (newGameState != null) {
-                    game = newGameState
-                    suggestions = getSuggestions(game, "")
+                    playerAction = null
+                    firstMove = false
+                    botTurn = !botTurn
                 }
 
                 if (gameOver) {
@@ -245,9 +285,9 @@ fun main() {
                     else if (blackScore >= 6 || blackScore > whiteScore) "Black wins."
                     else "Tie game."
                 }
-
                 rerender()
             }
         }
     }
 }
+
