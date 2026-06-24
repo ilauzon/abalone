@@ -33,6 +33,18 @@ class StateSearcher(private val heuristic: Heuristic) {
 
         /** The starting depth of search. */
         private const val STARTING_DEPTH = 1
+
+        /**
+         * Determines if the given state is a terminal state for minimax search.
+         *
+         * @param state the state being examined.
+         * @return true if the state is terminal, false if otherwise.
+         */
+        fun terminalTest(state: StateRepresentation): Boolean {
+            return state.players[state.currentPlayer]!!.score >= 6
+                    || state.players[state.currentPlayer.opposite()]!!.score >= 6
+                    || state.movesRemaining <= 0
+        }
     }
 
     val cache = TranspositionTable(4_000_000)
@@ -136,18 +148,6 @@ class StateSearcher(private val heuristic: Heuristic) {
         println("Action depth: ${bestDepthAction.first}")
         depths.add(bestDepthAction.first!!)
         return bestDepthAction
-    }
-
-    /**
-     * Determines if the given state is a terminal state for minimax search.
-     *
-     * @param state the state being examined.
-     * @return true if the state is terminal, false if otherwise.
-     */
-    fun terminalTest(state: StateRepresentation): Boolean {
-        return state.players[state.currentPlayer]!!.score >= 6
-                || state.players[state.currentPlayer.opposite()]!!.score >= 6
-                || state.movesRemaining <= 0
     }
 
     /**

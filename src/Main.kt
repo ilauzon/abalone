@@ -17,6 +17,17 @@ import abalone.model.search.*
 private const val WIDTH = 60
 private const val HEIGHT = 20
 
+private const val UP = '↑'
+private const val DOWN = '↓'
+private const val LEFT = '←'
+private const val RIGHT = '→'
+private const val UP_LEFT = '↖'
+private const val UP_RIGHT = '↗'
+private const val DOWN_LEFT = '↙'
+private const val DOWN_RIGHT = '↘'
+
+private const val ALT_MODE_CHAR = 'Z'
+
 private const val botGoesFirst = true
 private val botPiece = if (botGoesFirst) Piece.Black else Piece.White
 private val humanPiece = if (botGoesFirst) Piece.White else Piece.Black
@@ -28,7 +39,8 @@ fun RenderScope.emptySpot() = green { text('∙') }
 fun RenderScope.humanColour(scopedBlock: RenderScope.() -> Unit) = blue { scopedBlock() }
 fun RenderScope.botColour(scopedBlock: RenderScope.() -> Unit) = green { scopedBlock() }
 fun RenderScope.boardColour(scopedBlock: RenderScope.() -> Unit) = white { scopedBlock() }
-fun RenderScope.highlightedColour(scopedBlock: RenderScope.() -> Unit) = blue(layer = BG) { scopedBlock() }
+fun RenderScope.selected(scopedBlock: RenderScope.() -> Unit) = red(layer = BG) { black { scopedBlock() } }
+fun RenderScope.highlighted(scopedBlock: RenderScope.() -> Unit) = white(layer = BG) { black { scopedBlock() } }
 
 fun isLetter(c: Char): Boolean {
     return LetterCoordinate.convertLetter(c.toString()) != LetterCoordinate.NULL
@@ -81,97 +93,256 @@ fun toMoveDirection(str: String): MoveDirection? {
     return MoveDirection.entries.find { it.toString() == str }
 }
 
-data class ParseResult(val coordinates: List<Coordinate>, val moveDirection: MoveDirection?, val fragment: Char?)
+enum class IncompleteDirection {
+    Up,
+    Down,
+}
 
+data class ParseResult(
+    val first: Char?,
+    val rest: String,
+    val direction: MoveDirection?,
+    val incompleteDirection: IncompleteDirection?,
+    val altMode: Boolean,
+)
+
+/**
+ * Parses a move string. 
+ * 
+ * Examples:
+ * - A1↖: Move A1 along positive Y.
+ * - 1B↖: Move B1 along positive Y.
+ * - B123→: Move B1, B2, and B3 along positive X.
+ * - C345↙: Move C3, C4, and C5 along negative Z.
+ * - 3CDE↙: Move C3, D3, and E3 along negative Z.
+ * - ZZ123↖: Move A1, B2, and C3 along positive Y.
+ * - ZA123↖: Move B1, C2, and D3 along positive Y.
+ */
 fun parseMove(str: String): ParseResult? {
-    val coordinates = mutableListOf<Coordinate>()
-    val charPairs = str.chunked(2)
-    var fragment: Char? = null
-    var moveDirection: MoveDirection? = null
-    for ((counter, pair) in charPairs.withIndex()) {
-        if (pair.length == 1) {
-            fragment = pair[0]
-            break
+    if (str.isEmpty()) return ParseResult(null, "", null, null, false)
+    val altMode = str.isNotEmpty() && str[0] == ALT_MODE_CHAR
+    val s = if (altMode) str.drop(1) else str
+    if (s.isEmpty()) return ParseResult(null, "", null, null, altMode)
+    if (s.length == 1) return ParseResult(s[0], "", null, null, false)
+
+    val first = s[0]
+    var rest = ""
+    val directionChars = listOf(UP, DOWN, LEFT, RIGHT, UP_LEFT, UP_RIGHT, DOWN_LEFT, DOWN_RIGHT)
+    val incompleteDirectionChars = listOf(UP, DOWN)
+
+    val altModeLetters = setOf(
+        LetterCoordinate.D,
+        LetterCoordinate.C,
+        LetterCoordinate.B,
+        LetterCoordinate.A,
+    )
+
+    val altModeNumbers = setOf(
+        NumberCoordinate.ONE,
+        NumberCoordinate.TWO,
+        NumberCoordinate.THREE,
+        NumberCoordinate.FOUR,
+    )
+
+    var counter = 1
+    if (altMode && ALT_MODE_CHAR == first) {
+        while (counter < s.length && !directionChars.contains(s[counter])) {
+            if (rest.length >= 3 || rest.contains(s[counter])) return null
+            rest += s[counter]
+            counter++
+        }
+    } else if (isLetter(first)) {
+        if (altMode && !altModeLetters.contains(toLetter(first))) {
+            return null
+        }
+        while (counter < s.length && !directionChars.contains(s[counter])) {
+            if (!isNumber(s[counter])) {
+                return null
+            }
+            if (rest.length >= 3 || rest.contains(s[counter])) return null
+            rest += s[counter]
+            counter++
+        }
+    } else if (isNumber(first)) {
+        if (altMode && !altModeNumbers.contains(toNumber(first))) {
+            return null
+        }
+        while (counter < s.length && !directionChars.contains(s[counter])) {
+            if (!isLetter(s[counter])) {
+                return null
+            }
+            if (rest.length >= 3 || rest.contains(s[counter])) return null
+            rest += s[counter]
+            counter++
+        }
+    } else {
+        return null
+    }
+
+    if (counter >= s.length) {
+        return ParseResult(first, rest, null, null, altMode)
+    } else if (counter < s.length - 1) {
+        return null
+    } else {
+        var invalid = false
+        var incompleteDirection: IncompleteDirection? = null
+        val direction = when (s[counter]) {
+            LEFT -> MoveDirection.NegX
+            RIGHT -> MoveDirection.PosX
+            DOWN_RIGHT -> MoveDirection.NegY
+            UP_LEFT -> MoveDirection.PosY
+            DOWN_LEFT -> MoveDirection.NegZ
+            UP_RIGHT -> MoveDirection.PosZ
+            DOWN -> {
+                incompleteDirection = IncompleteDirection.Down
+                null
+            }
+
+            UP -> {
+                incompleteDirection = IncompleteDirection.Up
+                null
+            }
+
+            else -> {
+                invalid = true
+                null
+            }
         }
 
-        if (counter < 3) {
-            val coord = toCoordinate(pair)
-            if (coord == null) {
-                moveDirection = toMoveDirection(pair) ?: return null
-            } else {
-                coordinates.add(coord)
-            }
-        } else if (counter == 3) {
-            moveDirection = toMoveDirection(pair) ?: return null
-        } else {
+        if (invalid) {
             return null
         }
 
+        return ParseResult(first, rest, direction, incompleteDirection, altMode)
     }
-    return ParseResult(coordinates, moveDirection, fragment)
 }
 
-fun getMatchingSuggestions(
-    state: StateRepresentation,
-    parsed: ParseResult
-): List<String> {
-    val suggestions = mutableSetOf<String>()
+fun MoveDirection.toArrow(): Char {
+    return when (this) {
+        MoveDirection.NegX -> LEFT
+        MoveDirection.PosX -> RIGHT
+        MoveDirection.NegY -> DOWN_RIGHT
+        MoveDirection.PosY -> UP_LEFT
+        MoveDirection.NegZ -> DOWN_LEFT
+        MoveDirection.PosZ -> UP_RIGHT
+    }
+
+}
+
+data class MoveSuggestions(
+    val letters: MutableSet<LetterCoordinate> = mutableSetOf(),
+    val numbers: MutableSet<NumberCoordinate> = mutableSetOf(),
+    val directions: MutableSet<MoveDirection> = mutableSetOf(),
+    var isCompleteMove: Boolean = false
+) {
+
+    fun none(): Boolean {
+        return letters.isEmpty() && numbers.isEmpty() && directions.isEmpty() && !isCompleteMove
+    }
+}
+
+fun getNextMoveSuggestions(state: StateRepresentation, str: String): MoveSuggestions {
+    val suggestions = MoveSuggestions()
+    val parsed = parseMove(str) ?: return suggestions
     val actions = StateSpaceGenerator.actions(state)
     val board = state.board.cells
+    val parsedCoordinates = hashSetOf<Coordinate>()
+
+    try {
+        if (parsed.first != null) {
+            if (isLetter(parsed.first)) {
+                parsedCoordinates.addAll(parsed.rest.map { c -> Coordinate.get(toLetter(parsed.first), toNumber(c)) })
+            } else if (isNumber(parsed.first)) {
+                parsedCoordinates.addAll(parsed.rest.map { c -> Coordinate.get(toLetter(c), toNumber(parsed.first)) })
+            }
+        }
+    } catch (e: IllegalArgumentException) { // for Coordinate.get
+        return MoveSuggestions()
+    }
+
+
     for (action in actions) {
         val playerCoords = action.coordinates.filter { board[it] == state.currentPlayer }
-        if (parsed.fragment == null) {
-            if (playerCoords.containsAll(parsed.coordinates)) {
-                if (parsed.coordinates.size < 3) {
-                    suggestions.addAll(
-                        playerCoords
-                            .filter { !parsed.coordinates.contains(it) }
-                            .map { it.toString() }
-                    )
+        if (!playerCoords.containsAll(parsedCoordinates)) continue
+
+        if (parsed.first == null) {
+            if (action.direction == MoveDirection.PosX || action.direction == MoveDirection.NegX) {
+                suggestions.letters.addAll(playerCoords.map { it.letter })
+            }
+            if (action.direction == MoveDirection.PosY || action.direction == MoveDirection.NegY) {
+                suggestions.numbers.addAll(playerCoords.map { it.number })
+            }
+        } else if (isLetter(parsed.first) || isNumber(parsed.first)) {
+            if (parsed.direction != null) {
+                if (!parsedCoordinates.containsAll(playerCoords)) continue
+                if (parsed.direction == action.direction) {
+                    suggestions.isCompleteMove = true
+                    return suggestions
                 }
-                if (parsed.coordinates.containsAll(playerCoords)) {
-                    if (parsed.moveDirection == action.direction) {
-                        suggestions.add("[Enter] to make move")
-                        break
+                if (parsed.direction == MoveDirection.PosX || parsed.direction == MoveDirection.NegX) {
+                    if (parsed.direction == MoveDirection.NegX) {
+                        if (action.direction == MoveDirection.PosY || action.direction == MoveDirection.NegZ) {
+                            suggestions.directions.add(action.direction)
+                        }
                     } else {
-                        suggestions.add(action.direction.toString())
+                        if (action.direction == MoveDirection.NegY || action.direction == MoveDirection.PosZ) {
+                            suggestions.directions.add(action.direction)
+                        }
                     }
                 }
-            }
-        } else if (isLetter(parsed.fragment)) {
-            val letter = toLetter(parsed.fragment)
-            if (playerCoords.containsAll(parsed.coordinates) && parsed.coordinates.size < 3) {
-                suggestions.addAll(
-                    playerCoords
-                        .filter { !parsed.coordinates.contains(it) && it.letter == letter }
-                        .map { it.toString() }
-                )
-            }
-        } else if (isDirectionSign(parsed.fragment) && parsed.coordinates.isNotEmpty()) {
-            if (playerCoords.toSet() == parsed.coordinates.toSet()) {
-                if (action.direction.toString()[0] == parsed.fragment) {
-                    suggestions.add(action.direction.toString())
+            } else if (parsed.incompleteDirection != null) {
+                if (!parsedCoordinates.containsAll(playerCoords)) continue
+                if (parsed.incompleteDirection == IncompleteDirection.Up) {
+                    if (action.direction == MoveDirection.PosY || action.direction == MoveDirection.PosZ) {
+                        suggestions.directions.add(action.direction)
+                    }
+                } else {
+                    if (action.direction == MoveDirection.NegY || action.direction == MoveDirection.NegZ) {
+                        suggestions.directions.add(action.direction)
+                    }
+                }
+            } else {
+                if (parsedCoordinates.containsAll(playerCoords)) {
+                    suggestions.directions.add(action.direction)
+                } else {
+                    if (isLetter(parsed.first) && playerCoords.all { it.letter == toLetter(parsed.first) }) {
+                        suggestions.numbers.addAll(
+                            playerCoords
+                                .filter { !parsedCoordinates.contains(it) }
+                                .map { it.number })
+                    } else if (isNumber(parsed.first) && playerCoords.all { it.number == toNumber(parsed.first) }) {
+                        suggestions.letters.addAll(
+                            playerCoords
+                                .filter { !parsedCoordinates.contains(it) }
+                                .map { it.letter }
+                        )
+                    }
                 }
             }
         }
     }
-    return suggestions.toList()
-}
 
-fun getSuggestions(state: StateRepresentation, str: String): List<String> {
-    val parsed = parseMove(str) ?: return listOf()
-    return getMatchingSuggestions(state, parsed)
+    return suggestions
 }
 
 fun getMove(state: StateRepresentation, str: String): Action? {
     val parsed = parseMove(str) ?: return null
     val board = state.board.cells
+
+    val parsedCoordinates = hashSetOf<Coordinate>()
+    if (parsed.first != null) {
+        if (isLetter(parsed.first)) {
+            parsedCoordinates.addAll(parsed.rest.map { c -> Coordinate.get(toLetter(parsed.first), toNumber(c)) })
+        } else if (isNumber(parsed.first)) {
+            parsedCoordinates.addAll(parsed.rest.map { c -> Coordinate.get(toLetter(c), toNumber(parsed.first)) })
+        }
+    }
+
     for (action in StateSpaceGenerator.actions(state)) {
         if (action.coordinates
                 .filter { board[it] == state.currentPlayer }
-                .toSet() == parsed.coordinates.toSet()
-            && action.direction == parsed.moveDirection
-            && parsed.fragment == null
+                .toSet() == parsedCoordinates.toSet()
+            && action.direction == parsed.direction
         ) {
             return action
         }
@@ -179,10 +350,35 @@ fun getMove(state: StateRepresentation, str: String): Action? {
     return null
 }
 
+fun Coordinate.isSelected(
+    selectedLetters: Set<Char>,
+    selectedNumbers: Set<Char>,
+    altMode: Boolean = false
+): Boolean {
+    return selectedLetters.contains(letter.toString()[0]) && selectedNumbers.contains(number.toString()[0])
+}
+
+fun Coordinate.isHighlighted(
+    axisChar: Char,
+    altMode: Boolean = false
+): Boolean {
+    if (axisChar == ALT_MODE_CHAR) {
+        return letter.ordinal == number.ordinal
+    } else if (isLetter(axisChar)) {
+        return letter == toLetter(axisChar)
+    } else if (isNumber(axisChar)) {
+        return number == toNumber(axisChar)
+    }
+
+    return false
+}
+
 fun RenderScope.drawBoard(
     game: StateRepresentation,
-    selectedLetters: Set<Char> = setOf(),
-    selectedNumbers: Set<Char> = setOf()
+    selectedLetters: Set<Char>,
+    selectedNumbers: Set<Char>,
+    axisChar: Char?,
+    altMode: Boolean = false,
 ) {
 
     fun RenderScope.letterRowToString(letter: LetterCoordinate) {
@@ -196,8 +392,36 @@ fun RenderScope.drawBoard(
             in LetterCoordinate.A..LetterCoordinate.D -> " "
             else -> " "
         }
+
+        fun Coordinate.render(c: Char) {
+            if (isSelected(selectedLetters, selectedNumbers, altMode)) {
+                selected {
+                    if (axisChar != null && isHighlighted(axisChar, altMode)) {
+                        if (toNumber(axisChar) == number) {
+                            text(letter.toString())
+                        } else {
+                            text(number.toString())
+                        }
+                    } else {
+                        text(c)
+                    }
+                }
+            } else if (axisChar != null && isHighlighted(axisChar, altMode)) {
+                highlighted {
+                    if (toNumber(axisChar) == number) {
+                        text(letter.toString())
+                    } else {
+                        text(number.toString())
+                    }
+                }
+            } else {
+                text(c)
+            }
+        }
+
         for (l in letter.min..letter.max) {
-            val piece = game.board.cells[Coordinate.get(letter, l)]
+            val coord = Coordinate.get(letter, l)
+            val piece = game.board.cells[coord]
             when (piece) {
                 Piece.Empty -> {
                     text('∙')
@@ -210,7 +434,7 @@ fun RenderScope.drawBoard(
                         }
                     } else {
                         humanColour {
-                            text('O')
+                            coord.render('O')
                         }
                     }
                 }
@@ -222,7 +446,7 @@ fun RenderScope.drawBoard(
                         }
                     } else {
                         humanColour {
-                            text('@')
+                            coord.render('@')
                         }
                     }
                 }
@@ -237,7 +461,7 @@ fun RenderScope.drawBoard(
 
     fun RenderScope.number(c: Char) {
         if (selectedNumbers.contains(c)) {
-            highlightedColour { text(c) }
+            highlighted { text(c) }
         } else {
             boardColour { text(c) }
         }
@@ -245,7 +469,7 @@ fun RenderScope.drawBoard(
 
     fun RenderScope.letter(c: Char) {
         if (selectedLetters.contains(c)) {
-            highlightedColour { text(c) }
+            highlighted { text(c) }
         } else {
             boardColour { text(c) }
         }
@@ -260,7 +484,11 @@ fun RenderScope.drawBoard(
     text("  "); letter('C'); text(' '); letterRowToString(LetterCoordinate.C); number('8'); textLine()
     text("   "); letter('B'); text(' '); letterRowToString(LetterCoordinate.B); number('7'); textLine()
     text("    "); letter('A'); text(' '); letterRowToString(LetterCoordinate.A); number('6'); textLine()
-    text("     "); text("  "); number('1'); text(' '); number('2'); text(' '); number('3'); text(' '); number('4'); text(
+    text("     "); letter(ALT_MODE_CHAR); text(' '); number('1'); text(' '); number('2'); text(' '); number('3'); text(
+        ' '
+    ); number(
+        '4'
+    ); text(
         ' '
     ); number(
         '5'
@@ -287,14 +515,19 @@ fun main() {
         var botTurn = botGoesFirst
         var firstMove = true
         var gameOver = false
-        var suggestions = listOf<String>()
+        var suggestions = MoveSuggestions()
         var timerKey = Any()
         var inputStr = ""
+        var altMode = false
+        var axisChar: Char? = null
+
+        var selectedLetters = setOf<Char>()
+        var selectedNumbers = setOf<Char>()
 
         section {
             grid(Cols { fit(); fit() }) {
                 cell {
-                    drawBoard(game)
+                    drawBoard(game, selectedLetters, selectedNumbers, axisChar, altMode)
                 }
                 cell {
                     botColour {
@@ -310,8 +543,35 @@ fun main() {
                         textLine(inputStr)
                         humanColour {
                             textLine()
-                            suggestions.forEach {
-                                text("    $it")
+                            if (suggestions.isCompleteMove) {
+                                textLine("[Enter] to make move")
+                            }
+                            if (suggestions.letters.isNotEmpty()) {
+                                white {
+                                    text("Letters:    ")
+                                }
+                                suggestions.letters.sorted().forEach {
+                                    text("$it ")
+                                }
+                                textLine()
+                            }
+                            if (suggestions.numbers.isNotEmpty()) {
+                                white {
+                                    text("Numbers:    ")
+                                }
+                                suggestions.numbers.sorted().forEach {
+                                    text("$it ")
+                                }
+                                textLine()
+                            }
+                            if (suggestions.directions.isNotEmpty()) {
+                                white {
+                                    text("Directions: ")
+                                }
+                                suggestions.directions.sorted().forEach {
+                                    text("${it.toArrow()} ")
+                                }
+                                textLine()
                             }
                         }
                     } else {
@@ -332,6 +592,12 @@ fun main() {
                     Keys.Enter -> {
                         val move = getMove(game, inputStr)
                         if (move != null) {
+                            inputStr = ""
+                            axisChar = null
+                            altMode = false
+                            selectedLetters = setOf()
+                            selectedNumbers = setOf()
+                            suggestions = MoveSuggestions()
                             playerAction = move
                         }
                     }
@@ -344,14 +610,66 @@ fun main() {
                             inputStr = inputStr.dropLast(1)
                             str = inputStr
                         } else {
-                            var k = key
-                            if (key == Keys.Equals) k = Keys.Plus
-                            str = inputStr + k.toString().uppercase()
+                            var k: String = when (key) {
+                                Keys.Up -> UP.toString()
+                                Keys.Down -> DOWN.toString()
+                                Keys.Left -> LEFT.toString()
+                                Keys.Right -> RIGHT.toString()
+                                else -> key.toString()
+                            }
+
+                            fun mergeDirections(c1: Char, c2: Char) {
+                                inputStr = inputStr.dropLast(1)
+                                if (c1 == UP) {
+                                    if (c2 == LEFT) k = UP_LEFT.toString()
+                                    if (c2 == RIGHT) k = UP_RIGHT.toString()
+                                } else if (c1 == DOWN) {
+                                    if (c2 == LEFT) k = DOWN_LEFT.toString()
+                                    if (c2 == RIGHT) k = DOWN_RIGHT.toString()
+                                }
+                            }
+
+                            if (!inputStr.isEmpty()) {
+                                when (key) {
+                                    Keys.Up -> when (inputStr.last()) {
+                                        LEFT -> mergeDirections(UP, LEFT)
+                                        RIGHT -> mergeDirections(UP, RIGHT)
+                                    }
+
+                                    Keys.Down -> when (inputStr.last()) {
+                                        LEFT -> mergeDirections(DOWN, LEFT)
+                                        RIGHT -> mergeDirections(DOWN, RIGHT)
+                                    }
+
+                                    Keys.Left -> when (inputStr.last()) {
+                                        UP -> mergeDirections(UP, LEFT)
+                                        DOWN -> mergeDirections(DOWN, LEFT)
+                                    }
+
+                                    Keys.Right -> when (inputStr.last()) {
+                                        UP -> mergeDirections(UP, RIGHT)
+                                        DOWN -> mergeDirections(DOWN, RIGHT)
+                                    }
+                                }
+                            }
+                            str = inputStr + k.uppercase()
                         }
-                        val retrievedSuggestions = getSuggestions(game, str)
-                        if (!retrievedSuggestions.isEmpty()) {
-                            suggestions = retrievedSuggestions
+                        val s = getNextMoveSuggestions(game, str)
+                        if (!s.none()) {
                             inputStr = str
+                            suggestions = s
+                            selectedNumbers = inputStr.toSet()
+                            selectedLetters = inputStr.toSet()
+                            if (inputStr.isNotEmpty()) {
+                                altMode = inputStr.first() == ALT_MODE_CHAR
+                                axisChar = inputStr.first()
+                                if (altMode && inputStr.length > 1) {
+                                    axisChar = inputStr[1]
+                                }
+                            } else {
+                                altMode = false
+                                axisChar = null
+                            }
                         }
                     }
                 }
@@ -363,22 +681,19 @@ fun main() {
 
                 if (botTurn) {
                     rerender()
-                    try {
-                        val botAction = bot.search(game, maxDepth, firstMove)
-                        newGameState = StateSpaceGenerator.result(game, botAction)
-                        game = newGameState
-                    } catch (e: IllegalArgumentException) {
+                    val botAction = bot.search(game, maxDepth, firstMove)
+                    newGameState = StateSpaceGenerator.result(game, botAction)
+                    game = newGameState
+                    if (StateSearcher.terminalTest(game)) {
                         gameOver = true
                     }
                     firstMove = false
+                    suggestions = getNextMoveSuggestions(game, "")
                     botTurn = !botTurn
-                    inputStr = ""
-                    suggestions = getSuggestions(game, inputStr)
                 } else if (playerAction != null) { // the timer waits here in a hot loop until the user enters a move
-                    try {
-                        newGameState = StateSpaceGenerator.result(game, playerAction!!)
-                        game = newGameState
-                    } catch (e: IllegalArgumentException) {
+                    newGameState = StateSpaceGenerator.result(game, playerAction!!)
+                    game = newGameState
+                    if (StateSearcher.terminalTest(game)) {
                         gameOver = true
                     }
                     playerAction = null
