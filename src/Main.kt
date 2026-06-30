@@ -10,6 +10,8 @@ import com.varabyte.kotter.terminal.virtual.*
 import com.varabyte.kotterx.grid.*
 import abalone.model.*
 import abalone.model.search.*
+import abalone.model.LetterCoordinate as L
+import abalone.model.NumberCoordinate as N
 
 private const val WIDTH = 60
 private const val HEIGHT = 20
@@ -40,11 +42,11 @@ fun RenderScope.selected(scopedBlock: RenderScope.() -> Unit) = red(layer = BG) 
 fun RenderScope.highlighted(scopedBlock: RenderScope.() -> Unit) = white(layer = BG) { black { scopedBlock() } }
 
 fun isLetter(c: Char): Boolean {
-    return LetterCoordinate.convertLetter(c.toString()) != LetterCoordinate.NULL
+    return L.convertLetter(c.toString()) != L.NULL
 }
 
 fun isNumber(c: Char): Boolean {
-    return NumberCoordinate.convertNumber(c.toString()) != NumberCoordinate.NULL
+    return N.convertNumber(c.toString()) != N.NULL
 }
 
 fun isDirectionSign(c: Char): Boolean {
@@ -55,19 +57,19 @@ fun isDirectionAxis(c: Char): Boolean {
     return listOf('X', 'Y', 'Z').contains(c)
 }
 
-fun toNumber(c: Char): NumberCoordinate {
-    return NumberCoordinate.convertNumber(c.toString())
+fun toNumber(c: Char): N {
+    return N.convertNumber(c.toString())
 }
 
-fun toLetter(c: Char): LetterCoordinate {
-    return LetterCoordinate.convertLetter(c.toString())
+fun toLetter(c: Char): L {
+    return L.convertLetter(c.toString())
 }
 
 fun toCoordinate(str: String): Coordinate? {
     val letter = toLetter(str[0])
     val number = toNumber(str[1])
 
-    if (letter == LetterCoordinate.NULL || number == NumberCoordinate.NULL) {
+    if (letter == L.NULL || number == N.NULL) {
         return null
     }
 
@@ -104,17 +106,17 @@ data class ParseResult(
 )
 
 val altModeLetters = setOf(
-    LetterCoordinate.D,
-    LetterCoordinate.C,
-    LetterCoordinate.B,
-    LetterCoordinate.A,
+    L.D,
+    L.C,
+    L.B,
+    L.A,
 )
 
 val altModeNumbers = setOf(
-    NumberCoordinate.ONE,
-    NumberCoordinate.TWO,
-    NumberCoordinate.THREE,
-    NumberCoordinate.FOUR,
+    N.ONE,
+    N.TWO,
+    N.THREE,
+    N.FOUR,
 )
 
 enum class BoardSide {
@@ -123,7 +125,7 @@ enum class BoardSide {
     RIGHT,
 }
 
-data class SimpleCoordinate(val letter: LetterCoordinate, val number: NumberCoordinate)
+data class SimpleCoordinate(val letter: L, val number: N)
 
 /**
  * Transform a coordinate described w.r.t. the Z-axis of the board to a coordinate in regular space.
@@ -293,8 +295,8 @@ fun MoveDirection.toArrow(): Char {
 }
 
 data class MoveSuggestions(
-    val letters: MutableSet<LetterCoordinate> = mutableSetOf(),
-    val numbers: MutableSet<NumberCoordinate> = mutableSetOf(),
+    val letters: MutableSet<L> = mutableSetOf(),
+    val numbers: MutableSet<N> = mutableSetOf(),
     val directions: MutableSet<MoveDirection> = mutableSetOf(),
     var suggestAltMode: Boolean = false,
     var suggestAltModeAxis: Boolean = false,
@@ -331,8 +333,8 @@ fun parseCoordinates(parsed: ParseResult): Set<SimpleCoordinate>? {
                     }
 
                     SimpleCoordinate(
-                        LetterCoordinate.entries[ord],
-                        NumberCoordinate.entries[ord],
+                        L.entries[ord],
+                        N.entries[ord],
                     )
                 }
             )
@@ -541,11 +543,9 @@ fun getMove(state: StateRepresentation, str: String): Action? {
 }
 
 fun Coordinate.isSelected(
-    selectedLetters: Set<Char>,
-    selectedNumbers: Set<Char>,
-    altMode: Boolean = false
+    suggestions: MoveSuggestions
 ): Boolean {
-    return selectedLetters.contains(letter.toString()[0]) && selectedNumbers.contains(number.toString()[0])
+    return suggestions.letters.contains(letter) && suggestions.numbers.contains(number)
 }
 
 fun Coordinate.isHighlighted(
@@ -565,37 +565,12 @@ fun Coordinate.isHighlighted(
 
 fun RenderScope.drawBoard(
     game: StateRepresentation,
-    selectedLetters: Set<Char>,
-    selectedNumbers: Set<Char>,
-    axisChar: Char?,
-    altMode: Boolean = false,
+    suggestions: MoveSuggestions,
 ) {
 
-    fun RenderScope.letterRowToString(letter: LetterCoordinate) {
+    fun RenderScope.letterRowToString(letter: L) {
         fun Coordinate.render(c: Char) {
-            if (isSelected(selectedLetters, selectedNumbers, altMode)) {
-                selected {
-                    if (axisChar != null && isHighlighted(axisChar, altMode)) {
-                        if (toNumber(axisChar) == number) {
-                            text(letter.toString())
-                        } else {
-                            text(number.toString())
-                        }
-                    } else {
-                        text(c)
-                    }
-                }
-            } else if (axisChar != null && isHighlighted(axisChar, altMode)) {
-                highlighted {
-                    if (toNumber(axisChar) == number) {
-                        text(letter.toString())
-                    } else {
-                        text(number.toString())
-                    }
-                }
-            } else {
-                text(c)
-            }
+            text(c)
         }
 
         for (l in letter.min..letter.max) {
@@ -638,40 +613,45 @@ fun RenderScope.drawBoard(
         }
     }
 
-    fun RenderScope.number(c: Char) {
-        if (selectedNumbers.contains(c)) {
-            highlighted { text(c) }
+    fun RenderScope.number(n: N) {
+        if (suggestions.numbers.contains(n)) {
+            boardColour { text(n.toString()) }
         } else {
-            boardColour { text(c) }
+            text(' ')
         }
     }
 
-    fun RenderScope.letter(c: Char) {
-        if (selectedLetters.contains(c)) {
-            highlighted { text(c) }
+    fun RenderScope.letter(l: L) {
+        if (suggestions.letters.contains(l)) {
+            boardColour { text(l.toString()) }
         } else {
-            boardColour { text(c) }
+            text(' ')
         }
     }
 
-    text("    "); letter('I'); text(' '); letterRowToString(LetterCoordinate.I); textLine()
-    text("   "); letter('H'); text(' '); letterRowToString(LetterCoordinate.H); textLine()
-    text("  "); letter('G'); text(' '); letterRowToString(LetterCoordinate.G); textLine()
-    text(" "); letter('F'); text(' '); letterRowToString(LetterCoordinate.F); textLine()
-    text(""); letter('E'); text(' '); letterRowToString(LetterCoordinate.E); textLine()
-    text(" "); letter('D'); text(' '); letterRowToString(LetterCoordinate.D); number('9'); textLine()
-    text("  "); letter('C'); text(' '); letterRowToString(LetterCoordinate.C); number('8'); textLine()
-    text("   "); letter('B'); text(' '); letterRowToString(LetterCoordinate.B); number('7'); textLine()
-    text("    "); letter('A'); text(' '); letterRowToString(LetterCoordinate.A); number('6'); textLine()
-    text("     "); letter(ALT_MODE_CHAR); text(' '); number('1'); text(' '); number('2'); text(' '); number('3'); text(
-        ' '
-    ); number(
-        '4'
-    ); text(
-        ' '
-    ); number(
-        '5'
-    )
+    fun RenderScope.altChar() {
+        if (suggestions.suggestAltMode || suggestions.suggestAltModeAxis) {
+            boardColour { text(ALT_MODE_CHAR) }
+        } else {
+            text(' ')
+        }
+    }
+
+    text("    "); letter(L.I); text(' '); letterRowToString(L.I); textLine()
+    text("   "); letter(L.H); text(' '); letterRowToString(L.H); textLine()
+    text("  "); letter(L.G); text(' '); letterRowToString(L.G); textLine()
+    text(" "); letter(L.F); text(' '); letterRowToString(L.F); textLine()
+    text(""); letter(L.E); text(' '); letterRowToString(L.E); textLine()
+    text(" "); letter(L.D); text(' '); letterRowToString(L.D); number(N.NINE); textLine()
+    text("  "); letter(L.C); text(' '); letterRowToString(L.C); number(N.EIGHT); textLine()
+    text("   "); letter(L.B); text(' '); letterRowToString(L.B); number(N.SEVEN); textLine()
+    text("    "); letter(L.A); text(' '); letterRowToString(L.A); number(N.SIX); textLine()
+    text("     "); altChar()
+    text(' '); number(N.ONE)
+    text(' '); number(N.TWO)
+    text(' '); number(N.THREE)
+    text(' '); number(N.FOUR)
+    text(' '); number(N.FIVE)
 }
 
 fun main() {
@@ -700,13 +680,10 @@ fun main() {
         var altMode = false
         var axisChar: Char? = null
 
-        var selectedLetters = setOf<Char>()
-        var selectedNumbers = setOf<Char>()
-
         section {
             grid(Cols { fit(); fit() }) {
                 cell {
-                    drawBoard(game, selectedLetters, selectedNumbers, axisChar, altMode)
+                    drawBoard(game, suggestions)
                 }
                 cell {
                     botColour {
@@ -780,8 +757,6 @@ fun main() {
                             inputStr = ""
                             axisChar = null
                             altMode = false
-                            selectedLetters = setOf()
-                            selectedNumbers = setOf()
                             suggestions = MoveSuggestions()
                             playerAction = move
                         }
@@ -840,22 +815,20 @@ fun main() {
                             str = inputStr + k.uppercase()
                         }
                         val s = getNextMoveSuggestions(game, str)
-                        // if (!s.none()) {
-                        inputStr = str
-                        suggestions = s
-                        selectedNumbers = inputStr.toSet()
-                        selectedLetters = inputStr.toSet()
-                        if (inputStr.isNotEmpty()) {
-                            altMode = inputStr.first() == ALT_MODE_CHAR
-                            axisChar = inputStr.first()
-                            if (altMode && inputStr.length > 1) {
-                                axisChar = inputStr[1]
+                        if (!s.none()) {
+                            inputStr = str
+                            suggestions = s
+                            if (inputStr.isNotEmpty()) {
+                                altMode = inputStr.first() == ALT_MODE_CHAR
+                                axisChar = inputStr.first()
+                                if (altMode && inputStr.length > 1) {
+                                    axisChar = inputStr[1]
+                                }
+                            } else {
+                                altMode = false
+                                axisChar = null
                             }
-                        } else {
-                            altMode = false
-                            axisChar = null
                         }
-                        // }
                     }
                 }
                 rerender()
