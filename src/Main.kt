@@ -26,8 +26,8 @@ private const val UP_RIGHT = '↗'
 private const val DOWN_LEFT = '↙'
 private const val DOWN_RIGHT = '↘'
 
-private const val BLACK_PIECE = 'O'
-private const val WHITE_PIECE = 'O'
+private const val BLACK_PIECE = '@'
+private const val WHITE_PIECE = '@'
 
 private const val ALT_MODE_CHAR = '/'
 
@@ -387,22 +387,54 @@ fun parseCoordinates(parsed: ParseResult): Set<Coordinate>? {
         }
     } else {
         if (isLetter(parsed.first)) {
-            parsedCoordinates.addAll(parsed.rest.map { c ->
-                Coordinate.get(
-                    toLetter(parsed.first),
-                    toNumber(c)
-                )
-            })
+            try {
+                parsedCoordinates.addAll(parsed.rest.map { c ->
+                    Coordinate.get(
+                        toLetter(parsed.first),
+                        toNumber(c)
+                    )
+                })
+            } catch (e: IllegalArgumentException) {
+                return null
+            }
         } else if (isNumber(parsed.first)) {
-            parsedCoordinates.addAll(parsed.rest.map { c ->
-                Coordinate.get(
-                    toLetter(c),
-                    toNumber(parsed.first)
-                )
-            })
+            try {
+                parsedCoordinates.addAll(parsed.rest.map { c ->
+                    Coordinate.get(
+                        toLetter(c),
+                        toNumber(parsed.first)
+                    )
+                })
+            } catch (e: IllegalArgumentException) {
+                return null
+            }
         }
     }
     return parsedCoordinates
+}
+
+fun Action.line(): SelectionAxis? {
+    if (coordinates.isEmpty()) return null
+    val coordList = coordinates.toList()
+
+    val letter = coordList[0].letter
+    val number = coordList[0].number
+    var lettersAreTheSame = true
+    var numbersAreTheSame = true
+
+    for (coord in coordList) {
+        if (coord.letter != letter) lettersAreTheSame = false
+        if (coord.number != number) numbersAreTheSame = false
+    }
+    if (lettersAreTheSame) {
+        return SelectionAxis.X
+    }
+
+    if (numbersAreTheSame) {
+        return SelectionAxis.Y
+    }
+
+    return SelectionAxis.Z
 }
 
 fun getNextMoveSuggestions(state: StateRepresentation, str: String): MoveSuggestionSet {
@@ -427,6 +459,7 @@ fun getNextMoveSuggestions(state: StateRepresentation, str: String): MoveSuggest
     }
 
     outer@ for (action in actions) {
+        val line = action.line()
         val actionCoords = action.coordinates
             .filter { board[it] == state.currentPlayer }
         if (!actionCoords.containsAll(parsedCoordinates)) continue
@@ -446,8 +479,19 @@ fun getNextMoveSuggestions(state: StateRepresentation, str: String): MoveSuggest
                 continue
             }
 
-            suggestions.letters.addAll(actionCoords.map { it.letter })
-            suggestions.numbers.addAll(actionCoords.map { it.number })
+            if (actionCoords.size <= 1) {
+                suggestions.letters.addAll(actionCoords.map { it.letter })
+                suggestions.numbers.addAll(actionCoords.map { it.number })
+                continue
+            }
+
+            if (line == SelectionAxis.X) {
+                suggestions.letters.addAll(actionCoords.map { it.letter })
+            }
+
+            if (line == SelectionAxis.Y) {
+                suggestions.numbers.addAll(actionCoords.map { it.number })
+            }
 
             continue
         }
@@ -545,7 +589,10 @@ fun getNextMoveSuggestions(state: StateRepresentation, str: String): MoveSuggest
             continue
         }
 
-        if (isLetter(parsed.first) && actionCoords.all { it.letter == toLetter(parsed.first) }) {
+        if (isLetter(parsed.first) &&
+            actionCoords.containsAll(parsedCoordinates) &&
+            actionCoords.all { it.letter == toLetter(parsed.first) }
+        ) {
             suggestions.numbers.addAll(
                 actionCoords
                     .filter { !parsedCoordinates.contains(it) }
@@ -553,7 +600,10 @@ fun getNextMoveSuggestions(state: StateRepresentation, str: String): MoveSuggest
             continue
         }
 
-        if (isNumber(parsed.first) && actionCoords.all { it.number == toNumber(parsed.first) }) {
+        if (isNumber(parsed.first) &&
+            actionCoords.containsAll(parsedCoordinates) &&
+            actionCoords.all { it.number == toNumber(parsed.first) }
+        ) {
             suggestions.letters.addAll(
                 actionCoords
                     .filter { !parsedCoordinates.contains(it) }
@@ -618,11 +668,17 @@ fun Coordinate.display(c: Char, suggestions: MoveSuggestionSet): Char {
     val letterChar = letter.toString()[0]
     val numberChar = number.toString()[0]
     val simple = SimpleCoordinate(letter, number)
-    if (suggestions.parsed.axis == SelectionAxis.X && suggestions.parsed.axisIndexer == letterChar) {
+    if (suggestions.parsed.axis == SelectionAxis.X &&
+        suggestions.numbers.contains(number) &&
+        suggestions.parsed.axisIndexer == letterChar
+    ) {
         return numberChar
     }
 
-    if (suggestions.parsed.axis == SelectionAxis.Y && suggestions.parsed.axisIndexer == numberChar) {
+    if (suggestions.parsed.axis == SelectionAxis.Y &&
+        suggestions.letters.contains(letter) &&
+        suggestions.parsed.axisIndexer == numberChar
+    ) {
         return letterChar
     }
 
@@ -631,13 +687,20 @@ fun Coordinate.display(c: Char, suggestions: MoveSuggestionSet): Char {
         val alt = simple.alt()
         val altLetterChar = alt.letter.toString()[0]
         val altNumberChar = alt.number.toString()[0]
-        if (side == BoardSide.MIDDLE && suggestions.parsed.axisIndexer == ALT_MODE_CHAR) {
+        if (side == BoardSide.MIDDLE &&
+            suggestions.parsed.axisIndexer == ALT_MODE_CHAR &&
+            suggestions.numbers.contains(number)
+        ) {
             return numberChar
         }
-        if (suggestions.parsed.axisIndexer == altLetterChar) {
+        if (suggestions.parsed.axisIndexer == altLetterChar &&
+            suggestions.numbers.contains(number)
+        ) {
             return altNumberChar
         }
-        if (suggestions.parsed.axisIndexer == altNumberChar) {
+        if (suggestions.parsed.axisIndexer == altNumberChar &&
+            suggestions.letters.contains(letter)
+        ) {
             return altLetterChar
         }
     }
@@ -773,10 +836,47 @@ fun main() {
         val BLINK_LEN = 500
         var lastBlink = System.currentTimeMillis()
         var blinkOn by liveVarOf(false)
+        val gridWidth = WIDTH - 2
 
-        section {
-            val gridWidth = WIDTH - 2
-            underline { textLine("ABALONE v1.0.0") }
+        var helpMenuShowing by liveVarOf(false)
+
+        fun RenderScope.help() {
+            grid(Cols(gridWidth - 10 - 1, 10), characters = GridCharacters.Invisible) {
+                cell(row = 0, col = 0, colSpan = 2) {
+                    underline { textLine("CONTROLS") }
+                    textLine()
+                }
+                cell(row = 1, col = 1) {
+                    textLine(
+                        """
+                        +Y    +Z
+                          \   /
+                           \ /
+                        -X--.--+X
+                           / \    
+                          /   \
+                        -Z    -Y
+                        """.trimIndent()
+                    )
+                }
+                cell(row = 1, col = 0) {
+                    green { textLine("[A-I]") }; textLine("  Select line of marbles along the X-axis")
+                    green { textLine("[1-9]") }; textLine("  Select line of marbles along the Y-axis")
+                    green { textLine("[/]") }; textLine("  Select line of marbles along the Z-axis");
+                    green { textLine("[Arrow Keys]") }; textLine(
+                    "  Select direction to move the line of marbles. Combine them to\n" +
+                            "  move along Y and Z axes ([↓] plus [←] equals [↙])"
+                );
+                    green { textLine("[Enter]") }; textLine("  Move");
+                    green { textLine("[Q]") }; textLine("  Quit");
+                    green { textLine("[Esc]") }; textLine("  Toggle this menu");
+                    textLine()
+                    textLine("HINT: The labels on the edge of the board will tell you what \n      inputs are possible.")
+                }
+            }
+        }
+
+        fun RenderScope.game() {
             grid(cols = Cols { fit(); fit() }, characters = GridCharacters.Invisible) {
                 cell(col = 0) {
                     drawBoard(game, suggestions)
@@ -831,37 +931,15 @@ fun main() {
                 }
             }
             textLine(status)
-            grid(Cols(gridWidth - 10 - 1, 10), characters = GridCharacters.Invisible) {
-                cell(row = 0, col = 0, colSpan = 2) {
-                    underline { textLine("CONTROLS") }
-                    textLine()
-                }
-                cell(row = 1, col = 1) {
-                    textLine(
-                        """
-                                +Y    +Z
-                                  \   /
-                                   \ /
-                                -X--.--+X
-                                   / \    
-                                  /   \
-                                -Z    -Y
-                            """.trimIndent()
-                    )
-                }
-                cell(row = 1, col = 0) {
-                    green { textLine("[A-I]") }; textLine("  Select line of marbles along the X-axis")
-                    green { textLine("[1-9]") }; textLine("  Select line of marbles along the Y-axis")
-                    green { textLine("[/]") }; textLine("  Select line of marbles along the Z-axis");
-                    green { textLine("[Arrow Keys]") }; textLine(
-                    "  Select direction to move the line of marbles. Combine them to\n" +
-                            "  move along Y and Z axes ([↓] plus [←] equals [↙])"
-                );
-                    green { textLine("[Enter]") }; textLine("  Move");
-                    green { textLine("[Q]") }; textLine("  Quit");
-                    textLine()
-                    textLine("HINT: The labels on the edge of the board will tell you what \n      inputs are possible.")
-                }
+            green { text("[Esc]") }; textLine(" to see help menu")
+        }
+
+        section {
+            underline { textLine("ABALONE v1.0.0") }
+            if (helpMenuShowing) {
+                help()
+            } else {
+                game()
             }
         }.runUntilSignal {
 
@@ -870,6 +948,7 @@ fun main() {
             onKeyPressed {
                 when (key) {
                     Keys.Enter -> {
+                        if (helpMenuShowing) return@onKeyPressed
                         val move = getMove(game, inputStr)
                         if (move != null) {
                             inputStr = ""
@@ -878,9 +957,12 @@ fun main() {
                         }
                     }
 
+                    Keys.Escape -> helpMenuShowing = !helpMenuShowing
+
                     Keys.Q -> signal()
 
                     else -> {
+                        if (helpMenuShowing) return@onKeyPressed
                         val str: String
                         if (key == Keys.Backspace) {
                             inputStr = inputStr.dropLast(1)
