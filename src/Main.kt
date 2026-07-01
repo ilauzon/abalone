@@ -34,10 +34,12 @@ private const val ALT_MODE_CHAR = '/'
 private const val botGoesFirst = true
 private val botPiece = if (botGoesFirst) Piece.Black else Piece.White
 private val humanPiece = if (botGoesFirst) Piece.White else Piece.Black
+private val GREY = 0x333333
 
 fun RenderScope.humanColour(scopedBlock: RenderScope.() -> Unit) = blue { scopedBlock() }
 fun RenderScope.botColour(scopedBlock: RenderScope.() -> Unit) = red { scopedBlock() }
-fun RenderScope.boardColour(scopedBlock: RenderScope.() -> Unit) = white { scopedBlock() }
+fun RenderScope.disabledLabel(scopedBlock: RenderScope.() -> Unit) = rgb(GREY) { scopedBlock() }
+fun RenderScope.label(scopedBlock: RenderScope.() -> Unit) = white { scopedBlock() }
 val RenderScope.lineHighlight: RenderScope.(Char) -> Unit
     get() = { c -> rgb(0x333333, layer = BG) { text(c) } }
 val RenderScope.cellHighlight: RenderScope.(Char) -> Unit
@@ -769,25 +771,25 @@ fun RenderScope.drawBoard(
 
     fun RenderScope.number(n: N) {
         if (suggestions.numbers.contains(n)) {
-            boardColour { text(n.toString()) }
+            label { text(n.toString()) }
         } else {
-            text(' ')
+            disabledLabel { text(n.toString()) }
         }
     }
 
     fun RenderScope.letter(l: L) {
         if (suggestions.letters.contains(l)) {
-            boardColour { text(l.toString()) }
+            label { text(l.toString()) }
         } else {
-            text(' ')
+            disabledLabel { text(l.toString()) }
         }
     }
 
     fun RenderScope.altChar() {
         if (suggestions.suggestAltMode || suggestions.suggestAltModeAxis) {
-            boardColour { text(ALT_MODE_CHAR) }
+            label { text(ALT_MODE_CHAR) }
         } else {
-            text(' ')
+            disabledLabel { text(ALT_MODE_CHAR) }
         }
     }
 
@@ -933,6 +935,7 @@ fun main() {
             }
             textLine(status)
             green { text("[Esc]") }; textLine(" to see help menu")
+            green { text("[Q]") }; textLine(" to quit")
         }
 
         section {
