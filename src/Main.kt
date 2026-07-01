@@ -10,11 +10,12 @@ import com.varabyte.kotter.terminal.virtual.*
 import com.varabyte.kotterx.grid.*
 import abalone.model.*
 import abalone.model.search.*
+import kotlin.time.Duration.Companion.milliseconds
 import abalone.model.LetterCoordinate as L
 import abalone.model.NumberCoordinate as N
 
-private const val WIDTH = 60
-private const val HEIGHT = 20
+private const val WIDTH = 80
+private const val HEIGHT = 40
 
 private const val UP = '↑'
 private const val DOWN = '↓'
@@ -34,12 +35,8 @@ private const val botGoesFirst = true
 private val botPiece = if (botGoesFirst) Piece.Black else Piece.White
 private val humanPiece = if (botGoesFirst) Piece.White else Piece.Black
 
-fun RenderScope.blackMarble() = green { text('◯') }
-fun RenderScope.whiteMarble() = green { text('◉') }
-fun RenderScope.emptySpot() = green { text('∙') }
-
 fun RenderScope.humanColour(scopedBlock: RenderScope.() -> Unit) = blue { scopedBlock() }
-fun RenderScope.botColour(scopedBlock: RenderScope.() -> Unit) = green { scopedBlock() }
+fun RenderScope.botColour(scopedBlock: RenderScope.() -> Unit) = red { scopedBlock() }
 fun RenderScope.boardColour(scopedBlock: RenderScope.() -> Unit) = white { scopedBlock() }
 val RenderScope.lineHighlight: RenderScope.(Char) -> Unit
     get() = { c -> rgb(0x222222, layer = BG) { text(c) } }
@@ -746,6 +743,7 @@ fun RenderScope.drawBoard(
     text(' '); number(N.THREE)
     text(' '); number(N.FOUR)
     text(' '); number(N.FIVE)
+    textLine()
 }
 
 fun main() {
@@ -772,56 +770,92 @@ fun main() {
         var timerKey = Any()
         var inputStr = ""
 
-        section {
-            grid(Cols { fit(); fit() }) {
-                cell {
-                    drawBoard(game, suggestions)
-                }
-                cell {
-                    botColour {
-                        textLine("Bot score: ${game.players[botPiece]!!.score}")
-                    }
-                    humanColour {
-                        textLine("Human score: ${game.players[humanPiece]!!.score}")
-                    }
-                }
-                cell(row = 1, colSpan = 2) {
-                    if (!botTurn) {
-                        text("Your move: ")
-                        textLine(inputStr)
-                        humanColour {
-                            textLine()
-                            if (suggestions.isCompleteMove) {
-                                textLine("[Enter] to make move")
-                            }
-                            if (suggestions.suggestAltMode) {
-                                textLine("[$ALT_MODE_CHAR] to select line along Z-axis")
-                            }
-                            if (suggestions.suggestAltModeAxis) {
-                                textLine("[$ALT_MODE_CHAR] to select marbles on center line")
-                            }
-                            if (suggestions.directions.isNotEmpty()) {
-                                white {
-                                    text("Directions: ")
-                                }
-                                suggestions.directions.sorted().forEach {
-                                    text("${it.toArrow()} ")
-                                }
-                                textLine()
-                            }
+        // caret blinking
+        val BLINK_LEN = 500
+        var lastBlink = System.currentTimeMillis()
+        var blinkOn by liveVarOf(false)
 
+        section {
+            val gridWidth = WIDTH - 2
+            underline { textLine("ABALONE v1.0.0") }
+            textLine()
+            drawBoard(game, suggestions)
+            textLine()
+            humanColour {
+                textLine("Your score: ${game.players[humanPiece]!!.score}")
+            }
+            botColour {
+                textLine("Bot score:  ${game.players[botPiece]!!.score}")
+            }
+            textLine()
+            if (!botTurn) {
+                grid(cols = Cols(gridWidth)) {
+                    cell {
+                        text(" Your move: ")
+                        text(inputStr)
+                        if (blinkOn) {
+                            invert { text(' ') }
                         }
-                    } else {
-                        botColour {
-                            textLine("Bot moving...")
+                        textLine()
+                    }
+                }
+                green {
+                    if (suggestions.isCompleteMove) {
+                        textLine("[Enter] to make move")
+                    }
+                    if (suggestions.directions.isNotEmpty()) {
+                        white {
+                            text("Directions: ")
                         }
+                        suggestions.directions.sorted().forEach {
+                            text("${it.toArrow()} ")
+                        }
+                        textLine()
                     }
-                    green {
-                        textLine(status)
-                    }
+
+                }
+            } else {
+                botColour {
+                    textLine("Bot moving...")
+                }
+            }
+            green {
+                textLine(status)
+            }
+            grid(Cols(gridWidth - 10 - 1, 10), characters = GridCharacters.Invisible) {
+                cell(row = 0, col = 0, colSpan = 2) {
+                    underline { textLine("CONTROLS") }
+                    textLine()
+                }
+                cell(row = 1, col = 1) {
+                    textLine(
+                        """
+                                +Y    +Z
+                                  \   /
+                                   \ /
+                                -X--.--+X
+                                   / \    
+                                  /   \
+                                -Z    -Y
+                            """.trimIndent()
+                    )
+                }
+                cell(row = 1, col = 0) {
+                    green { textLine("[A-I]") }; textLine("  Select line of marbles along the X-axis")
+                    green { textLine("[1-9]") }; textLine("  Select line of marbles along the Y-axis")
+                    green { textLine("[/]") }; textLine("  Select line of marbles along the Z-axis");
+                    green { textLine("[Arrow Keys]") }; textLine(
+                    "  Select direction to move the line of marbles. Combine them to\n" +
+                            "  move along Y and Z axes ([↓] plus [←] equals [↙])"
+                );
+                    green { textLine("[Enter]") }; textLine("  Move");
+                    green { textLine("[Q]") }; textLine("  Quit");
+                    textLine()
+                    textLine("HINT: The labels on the edge of the board will tell you what \n      inputs are possible.")
                 }
             }
         }.runUntilSignal {
+
             var playerAction: Action? = null
 
             onKeyPressed {
@@ -898,6 +932,11 @@ fun main() {
             }
 
             addTimer(Anim.ONE_FRAME_60FPS, repeat = true, key = timerKey) {
+                if (System.currentTimeMillis() - lastBlink > BLINK_LEN) {
+                    blinkOn = !blinkOn
+                    lastBlink = System.currentTimeMillis()
+                    rerender()
+                }
                 var newGameState: StateRepresentation? = null
 
                 if (botTurn) {
@@ -911,7 +950,7 @@ fun main() {
                     firstMove = false
                     suggestions = getNextMoveSuggestions(game, "")
                     botTurn = !botTurn
-                } else if (playerAction != null) { // the timer waits here in a hot loop until the user enters a move
+                } else if (playerAction != null) { // the timer tests this 60 times a second until the player has moved
                     newGameState = StateSpaceGenerator.result(game, playerAction!!)
                     game = newGameState
                     if (StateSearcher.terminalTest(game)) {
