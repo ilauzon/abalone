@@ -860,10 +860,11 @@ fun main() {
                     )
                 }
                 cell(row = 1, col = 0) {
-                    green { textLine("[A-I]") }; textLine("  Select line of marbles along the X-axis")
-                    green { textLine("[1-9]") }; textLine("  Select line of marbles along the Y-axis")
-                    green { textLine("[/]") }; textLine("  Select line of marbles along the Z-axis");
-                    green { textLine("[Arrow Keys]") }; textLine(
+                    green { textLine("[A,B,C,D,E,F,G,H,I]") }; textLine("  Select line of marbles along the X-axis")
+                    green { textLine("[1,2,3,4,5,6,7,8,9]") }; textLine("  Select line of marbles along the Y-axis")
+                    green { textLine("[/]") }; textLine("  Toggle selecting along the Z-axis");
+                    green { textLine("[D,C,B,A,/,1,2,3,4]") }; textLine("  Select line of marbles along the Z-axis")
+                    green { textLine("[Arrow keys]") }; textLine(
                     "  Select direction to move the line of marbles. Combine them to\n" +
                             "  move along Y and Z axes ([↓] plus [←] equals [↙])"
                 );
@@ -871,7 +872,7 @@ fun main() {
                     green { textLine("[Q]") }; textLine("  Quit");
                     green { textLine("[Esc]") }; textLine("  Toggle this menu");
                     textLine()
-                    textLine("HINT: The labels on the edge of the board will tell you what \n      inputs are possible.")
+                    textLine("HINT: The labels on the edge of the board will tell you what \n      moves are possible.")
                 }
             }
         }
@@ -1036,6 +1037,8 @@ fun main() {
                     game = newGameState
                     if (StateSearcher.terminalTest(game)) {
                         gameOver = true
+                        rerender()
+                        return@addTimer
                     }
                     firstMove = false
                     suggestions = getNextMoveSuggestions(game, "")
@@ -1046,6 +1049,8 @@ fun main() {
                     game = newGameState
                     if (StateSearcher.terminalTest(game)) {
                         gameOver = true
+                        rerender()
+                        return@addTimer
                     }
                     playerAction = null
                     firstMove = false
