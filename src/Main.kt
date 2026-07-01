@@ -10,7 +10,7 @@ import com.varabyte.kotter.terminal.virtual.*
 import com.varabyte.kotterx.grid.*
 import abalone.model.*
 import abalone.model.search.*
-import kotlin.time.Duration.Companion.milliseconds
+import com.varabyte.kotter.terminal.system.SystemTerminal
 import abalone.model.LetterCoordinate as L
 import abalone.model.NumberCoordinate as N
 
@@ -27,7 +27,7 @@ private const val DOWN_LEFT = '↙'
 private const val DOWN_RIGHT = '↘'
 
 private const val BLACK_PIECE = 'O'
-private const val WHITE_PIECE = '@'
+private const val WHITE_PIECE = 'O'
 
 private const val ALT_MODE_CHAR = '/'
 
@@ -39,7 +39,7 @@ fun RenderScope.humanColour(scopedBlock: RenderScope.() -> Unit) = blue { scoped
 fun RenderScope.botColour(scopedBlock: RenderScope.() -> Unit) = red { scopedBlock() }
 fun RenderScope.boardColour(scopedBlock: RenderScope.() -> Unit) = white { scopedBlock() }
 val RenderScope.lineHighlight: RenderScope.(Char) -> Unit
-    get() = { c -> rgb(0x222222, layer = BG) { text(c) } }
+    get() = { c -> rgb(0x333333, layer = BG) { text(c) } }
 val RenderScope.cellHighlight: RenderScope.(Char) -> Unit
     get() = { c -> white(layer = BG) { black { text(c) } } }
 
@@ -743,13 +743,12 @@ fun RenderScope.drawBoard(
     text(' '); number(N.THREE)
     text(' '); number(N.FOUR)
     text(' '); number(N.FIVE)
-    textLine()
 }
 
 fun main() {
     session(
         terminal = listOf(
-//            { SystemTerminal() },
+            { SystemTerminal() },
             { VirtualTerminal.create(terminalSize = TerminalSize(WIDTH, HEIGHT + 15)) }
         ).firstSuccess(),
         clearTerminal = true,
@@ -762,13 +761,13 @@ fun main() {
         )
         val maxDepth = 5
         val bot = StateSearcher(IsaacHeuristic())
-        var status = ""
         var botTurn = botGoesFirst
         var firstMove = true
         var gameOver = false
         var suggestions = MoveSuggestionSet()
         var timerKey = Any()
         var inputStr = ""
+        var status = ""
 
         // caret blinking
         val BLINK_LEN = 500
@@ -778,18 +777,29 @@ fun main() {
         section {
             val gridWidth = WIDTH - 2
             underline { textLine("ABALONE v1.0.0") }
-            textLine()
-            drawBoard(game, suggestions)
-            textLine()
-            humanColour {
-                textLine("Your score: ${game.players[humanPiece]!!.score}")
+            grid(cols = Cols { fit(); fit() }, characters = GridCharacters.Invisible) {
+                cell(col = 0) {
+                    drawBoard(game, suggestions)
+                    // give the board some breathing room on the right
+                    text("              ")
+                }
+                cell(col = 1) {
+                    grid(cols = Cols { fit() }) {
+                        cell {
+                            text(" ")
+                            underline { text("SCORE") }; textLine(" ")
+                            humanColour {
+                                textLine(" You: ${game.players[humanPiece]!!.score} ")
+                            }
+                            botColour {
+                                textLine(" Bot: ${game.players[botPiece]!!.score} ")
+                            }
+                        }
+                    }
+                }
             }
-            botColour {
-                textLine("Bot score:  ${game.players[botPiece]!!.score}")
-            }
-            textLine()
             if (!botTurn) {
-                grid(cols = Cols(gridWidth)) {
+                grid(cols = Cols(40)) {
                     cell {
                         text(" Your move: ")
                         text(inputStr)
@@ -801,27 +811,26 @@ fun main() {
                 }
                 green {
                     if (suggestions.isCompleteMove) {
-                        textLine("[Enter] to make move")
-                    }
-                    if (suggestions.directions.isNotEmpty()) {
+                        text("[Enter] to make move")
+                    } else if (suggestions.directions.isNotEmpty()) {
                         white {
                             text("Directions: ")
                         }
                         suggestions.directions.sorted().forEach {
                             text("${it.toArrow()} ")
                         }
-                        textLine()
                     }
-
                 }
             } else {
-                botColour {
-                    textLine("Bot moving...")
+                grid(cols = Cols(gridWidth), characters = GridCharacters.Invisible) {
+                    cell {
+                        botColour {
+                            textLine("Bot moving...")
+                        }
+                    }
                 }
             }
-            green {
-                textLine(status)
-            }
+            textLine(status)
             grid(Cols(gridWidth - 10 - 1, 10), characters = GridCharacters.Invisible) {
                 cell(row = 0, col = 0, colSpan = 2) {
                     underline { textLine("CONTROLS") }
@@ -935,7 +944,6 @@ fun main() {
                 if (System.currentTimeMillis() - lastBlink > BLINK_LEN) {
                     blinkOn = !blinkOn
                     lastBlink = System.currentTimeMillis()
-                    rerender()
                 }
                 var newGameState: StateRepresentation? = null
 
@@ -950,7 +958,8 @@ fun main() {
                     firstMove = false
                     suggestions = getNextMoveSuggestions(game, "")
                     botTurn = !botTurn
-                } else if (playerAction != null) { // the timer tests this 60 times a second until the player has moved
+                    rerender()
+                } else if (playerAction != null) { // the control flow bumps into this 60 times a second the player has moved
                     newGameState = StateSpaceGenerator.result(game, playerAction!!)
                     game = newGameState
                     if (StateSearcher.terminalTest(game)) {
@@ -959,6 +968,7 @@ fun main() {
                     playerAction = null
                     firstMove = false
                     botTurn = !botTurn
+                    rerender()
                 }
 
                 if (gameOver) {
@@ -969,7 +979,6 @@ fun main() {
                     else if (blackScore >= 6 || blackScore > whiteScore) "Black wins."
                     else "Tie game."
                 }
-                rerender()
             }
         }
     }
