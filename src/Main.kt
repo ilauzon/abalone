@@ -25,6 +25,9 @@ private const val UP_RIGHT = '↗'
 private const val DOWN_LEFT = '↙'
 private const val DOWN_RIGHT = '↘'
 
+private const val BLACK_PIECE = 'O'
+private const val WHITE_PIECE = '@'
+
 private const val ALT_MODE_CHAR = '/'
 
 private const val botGoesFirst = true
@@ -38,8 +41,10 @@ fun RenderScope.emptySpot() = green { text('∙') }
 fun RenderScope.humanColour(scopedBlock: RenderScope.() -> Unit) = blue { scopedBlock() }
 fun RenderScope.botColour(scopedBlock: RenderScope.() -> Unit) = green { scopedBlock() }
 fun RenderScope.boardColour(scopedBlock: RenderScope.() -> Unit) = white { scopedBlock() }
-fun RenderScope.selected(scopedBlock: RenderScope.() -> Unit) = red(layer = BG) { black { scopedBlock() } }
-fun RenderScope.highlighted(scopedBlock: RenderScope.() -> Unit) = white(layer = BG) { black { scopedBlock() } }
+val RenderScope.lineHighlight: RenderScope.(Char) -> Unit
+    get() = { c -> rgb(0x222222, layer = BG) { text(c) } }
+val RenderScope.cellHighlight: RenderScope.(Char) -> Unit
+    get() = { c -> white(layer = BG) { black { text(c) } } }
 
 fun isLetter(c: Char): Boolean {
     return L.convertLetter(c.toString()) != L.NULL
@@ -133,15 +138,15 @@ data class SimpleCoordinate(val letter: L, val number: N)
  *             This must be specified since the side that Z-axis coordinates are on can be ambiguous.
  * @return the transformed coordinate.
  */
-fun SimpleCoordinate.reg(side: BoardSide): SimpleCoordinate {
+fun SimpleCoordinate.reg(side: BoardSide): Coordinate {
     if (side == BoardSide.LEFT) {
         val altLetter = letter + number.ordinal
-        return SimpleCoordinate(altLetter, number)
+        return Coordinate.get(altLetter, number)
     } else if (side == BoardSide.MIDDLE) {
-        return SimpleCoordinate(letter, number)
+        return Coordinate.get(letter, number)
     } else {
         val altNumber = number + letter.ordinal
-        return SimpleCoordinate(letter, altNumber)
+        return Coordinate.get(letter, altNumber)
     }
 }
 
@@ -163,7 +168,6 @@ fun SimpleCoordinate.alt(): SimpleCoordinate {
     }
 }
 
-
 fun SimpleCoordinate.side(): BoardSide {
     val difference = letter.ordinal - number.ordinal
     return when {
@@ -171,6 +175,18 @@ fun SimpleCoordinate.side(): BoardSide {
         difference < 0 -> BoardSide.RIGHT
         else -> BoardSide.MIDDLE
     }
+}
+
+fun Coordinate.alt(): SimpleCoordinate {
+    return SimpleCoordinate(letter, number).alt()
+}
+
+fun Coordinate.side(): BoardSide {
+    return SimpleCoordinate(letter, number).side()
+}
+
+fun Coordinate.simple(): SimpleCoordinate {
+    return SimpleCoordinate(letter, number)
 }
 
 /**
@@ -294,13 +310,25 @@ fun MoveDirection.toArrow(): Char {
 
 }
 
-data class MoveSuggestions(
+enum class SelectionAxis {
+    X, Y, Z
+}
+
+open class ParsedInput(
+    var axis: SelectionAxis? = null,
+    var axisIndexer: Char? = null,
+    val coordinates: MutableSet<Coordinate> = mutableSetOf(),
+    var direction: MoveDirection? = null,
+)
+
+data class MoveSuggestionSet(
     val letters: MutableSet<L> = mutableSetOf(),
     val numbers: MutableSet<N> = mutableSetOf(),
     val directions: MutableSet<MoveDirection> = mutableSetOf(),
+    val parsed: ParsedInput = ParsedInput(),
     var suggestAltMode: Boolean = false,
     var suggestAltModeAxis: Boolean = false,
-    var isCompleteMove: Boolean = false
+    var isCompleteMove: Boolean = false,
 ) {
 
     fun none(): Boolean {
@@ -313,12 +341,12 @@ data class MoveSuggestions(
  *
  * @return the parsed coordinates in regular space, or null if there was a problem parsing.
  */
-fun parseCoordinates(parsed: ParseResult): Set<SimpleCoordinate>? {
+fun parseCoordinates(parsed: ParseResult): Set<Coordinate>? {
     if (parsed.first == null) {
         return hashSetOf()
     }
 
-    val parsedCoordinates = hashSetOf<SimpleCoordinate>()
+    val parsedCoordinates = hashSetOf<Coordinate>()
     if (parsed.altMode) {
         if (ALT_MODE_CHAR == parsed.first) {
             parsedCoordinates.addAll(
@@ -332,37 +360,45 @@ fun parseCoordinates(parsed: ParseResult): Set<SimpleCoordinate>? {
                         return null
                     }
 
-                    SimpleCoordinate(
+                    Coordinate.get(
                         L.entries[ord],
                         N.entries[ord],
                     )
                 }
             )
         } else if (isLetter(parsed.first)) {
-            parsedCoordinates.addAll(
-                parsed.rest.map { c ->
-                    SimpleCoordinate(toLetter(parsed.first), toNumber(c)).reg(BoardSide.LEFT)
-                }
-            )
+            try {
+                parsedCoordinates.addAll(
+                    parsed.rest.map { c ->
+                        SimpleCoordinate(toLetter(parsed.first), toNumber(c)).reg(BoardSide.LEFT)
+                    }
+                )
+            } catch (e: IllegalArgumentException) {
+                return null
+            }
         } else if (isNumber(parsed.first)) {
             if (!altModeNumbers.contains(toNumber(parsed.first))) return null
-            parsedCoordinates.addAll(
-                parsed.rest.map { c ->
-                    SimpleCoordinate(toLetter(c), toNumber(parsed.first)).reg(BoardSide.RIGHT)
-                }
-            )
+            try {
+                parsedCoordinates.addAll(
+                    parsed.rest.map { c ->
+                        SimpleCoordinate(toLetter(c), toNumber(parsed.first)).reg(BoardSide.RIGHT)
+                    }
+                )
+            } catch (e: IllegalArgumentException) {
+                return null
+            }
         }
     } else {
         if (isLetter(parsed.first)) {
             parsedCoordinates.addAll(parsed.rest.map { c ->
-                SimpleCoordinate(
+                Coordinate.get(
                     toLetter(parsed.first),
                     toNumber(c)
                 )
             })
         } else if (isNumber(parsed.first)) {
             parsedCoordinates.addAll(parsed.rest.map { c ->
-                SimpleCoordinate(
+                Coordinate.get(
                     toLetter(c),
                     toNumber(parsed.first)
                 )
@@ -372,17 +408,30 @@ fun parseCoordinates(parsed: ParseResult): Set<SimpleCoordinate>? {
     return parsedCoordinates
 }
 
-fun getNextMoveSuggestions(state: StateRepresentation, str: String): MoveSuggestions {
-    val suggestions = MoveSuggestions()
+fun getNextMoveSuggestions(state: StateRepresentation, str: String): MoveSuggestionSet {
+    val suggestions = MoveSuggestionSet()
     val parsed = parseMove(str) ?: return suggestions
     val actions = StateSpaceGenerator.actions(state)
     val board = state.board.cells
-    val parsedCoordinates = parseCoordinates(parsed) ?: return MoveSuggestions()
+    val parsedCoordinates = parseCoordinates(parsed) ?: return MoveSuggestionSet()
+
+    suggestions.parsed.coordinates.addAll(parsedCoordinates)
+
+    if (parsed.first != null) {
+        suggestions.parsed.axisIndexer = parsed.first
+        if (parsed.altMode) {
+            suggestions.parsed.axis = SelectionAxis.Z
+        } else if (isLetter((parsed.first))) {
+            suggestions.parsed.axis = SelectionAxis.X
+        } else if (isNumber(parsed.first)) {
+            suggestions.parsed.axis = SelectionAxis.Y
+            suggestions.parsed.axisIndexer = parsed.first
+        }
+    }
 
     outer@ for (action in actions) {
         val actionCoords = action.coordinates
             .filter { board[it] == state.currentPlayer }
-            .map { SimpleCoordinate(it.letter, it.number) }
         if (!actionCoords.containsAll(parsedCoordinates)) continue
 
         if (parsed.first == null) {
@@ -400,14 +449,8 @@ fun getNextMoveSuggestions(state: StateRepresentation, str: String): MoveSuggest
                 continue
             }
 
-            if (action.direction == MoveDirection.PosX || action.direction == MoveDirection.NegX) {
-                suggestions.letters.addAll(actionCoords.map { it.letter })
-                continue
-            }
-
-            if (action.direction == MoveDirection.PosY || action.direction == MoveDirection.NegY) {
-                suggestions.numbers.addAll(actionCoords.map { it.number })
-            }
+            suggestions.letters.addAll(actionCoords.map { it.letter })
+            suggestions.numbers.addAll(actionCoords.map { it.number })
 
             continue
         }
@@ -425,6 +468,7 @@ fun getNextMoveSuggestions(state: StateRepresentation, str: String): MoveSuggest
 
             if (parsed.direction == action.direction) {
                 suggestions.isCompleteMove = true
+                suggestions.parsed.direction = action.direction
                 return suggestions
             }
             continue
@@ -542,74 +586,124 @@ fun getMove(state: StateRepresentation, str: String): Action? {
     return null
 }
 
-fun Coordinate.isSelected(
-    suggestions: MoveSuggestions
+fun Coordinate.lineIsHighlighted(
+    suggestions: MoveSuggestionSet
 ): Boolean {
-    return suggestions.letters.contains(letter) && suggestions.numbers.contains(number)
-}
+    if (suggestions.parsed.axis == SelectionAxis.X && letter.toString()[0] == suggestions.parsed.axisIndexer) {
+        return true
+    }
 
-fun Coordinate.isHighlighted(
-    axisChar: Char,
-    altMode: Boolean = false
-): Boolean {
-    if (axisChar == ALT_MODE_CHAR) {
-        return letter.ordinal == number.ordinal
-    } else if (isLetter(axisChar)) {
-        return letter == toLetter(axisChar)
-    } else if (isNumber(axisChar)) {
-        return number == toNumber(axisChar)
+    if (suggestions.parsed.axis == SelectionAxis.Y && number.toString()[0] == suggestions.parsed.axisIndexer) {
+        return true
+    }
+
+    if (suggestions.parsed.axis == SelectionAxis.Z) {
+        val simple = SimpleCoordinate(letter, number)
+        val alt = simple.alt()
+        val side = simple.side()
+        if (side == BoardSide.MIDDLE && suggestions.parsed.axisIndexer == ALT_MODE_CHAR) {
+            return true
+        }
+        if (side == BoardSide.LEFT && suggestions.parsed.axisIndexer == alt.letter.toString()[0]) {
+            return true
+        }
+
+        if (side == BoardSide.RIGHT && suggestions.parsed.axisIndexer == alt.number.toString()[0]) {
+            return true
+        }
+        return false
     }
 
     return false
 }
 
+fun Coordinate.display(c: Char, suggestions: MoveSuggestionSet): Char {
+    val letterChar = letter.toString()[0]
+    val numberChar = number.toString()[0]
+    val simple = SimpleCoordinate(letter, number)
+    if (suggestions.parsed.axis == SelectionAxis.X && suggestions.parsed.axisIndexer == letterChar) {
+        return numberChar
+    }
+
+    if (suggestions.parsed.axis == SelectionAxis.Y && suggestions.parsed.axisIndexer == numberChar) {
+        return letterChar
+    }
+
+    if (suggestions.parsed.axis == SelectionAxis.Z) {
+        val side = simple.side()
+        val alt = simple.alt()
+        val altLetterChar = alt.letter.toString()[0]
+        val altNumberChar = alt.number.toString()[0]
+        if (side == BoardSide.MIDDLE && suggestions.parsed.axisIndexer == ALT_MODE_CHAR) {
+            return numberChar
+        }
+        if (suggestions.parsed.axisIndexer == altLetterChar) {
+            return altNumberChar
+        }
+        if (suggestions.parsed.axisIndexer == altNumberChar) {
+            return altLetterChar
+        }
+    }
+
+    return c
+}
+
 fun RenderScope.drawBoard(
     game: StateRepresentation,
-    suggestions: MoveSuggestions,
+    suggestions: MoveSuggestionSet,
 ) {
+    fun Coordinate.render() {
+        val piece = game.board.cells[this]
+        var pixel: RenderScope.(c: Char) -> Unit = { c -> text(c) }
 
-    fun RenderScope.letterRowToString(letter: L) {
-        fun Coordinate.render(c: Char) {
-            text(c)
+        if (lineIsHighlighted(suggestions)) {
+            pixel = lineHighlight
         }
 
-        for (l in letter.min..letter.max) {
-            val coord = Coordinate.get(letter, l)
-            val piece = game.board.cells[coord]
-            when (piece) {
-                Piece.Empty -> {
-                    text('∙')
-                }
+        if (suggestions.parsed.coordinates.contains(this)) {
+            pixel = cellHighlight
+        }
 
-                Piece.Black -> {
-                    if (botPiece == Piece.Black) {
-                        botColour {
-                            text('O')
-                        }
-                    } else {
-                        humanColour {
-                            coord.render('O')
-                        }
+        when (piece) {
+            Piece.Empty -> {
+                pixel('.')
+            }
+
+            Piece.Black -> {
+                if (botPiece == Piece.Black) {
+                    botColour {
+                        pixel(BLACK_PIECE)
                     }
-                }
-
-                Piece.White -> {
-                    if (botPiece == Piece.White) {
-                        botColour {
-                            text('@')
-                        }
-                    } else {
-                        humanColour {
-                            coord.render('@')
-                        }
+                } else {
+                    humanColour {
+                        pixel(display(BLACK_PIECE, suggestions))
                     }
-                }
-
-                Piece.OffBoard -> {
-                    text(' ')
                 }
             }
-            text(' ')
+
+            Piece.White -> {
+                if (botPiece == Piece.White) {
+                    botColour {
+                        pixel(WHITE_PIECE)
+                    }
+                } else {
+                    humanColour {
+                        pixel(display(WHITE_PIECE, suggestions))
+                    }
+                }
+            }
+
+            Piece.OffBoard -> {
+                text(' ')
+            }
+        }
+        text(' ')
+    }
+
+    fun letterRowToString(letter: L) {
+        for (l in letter.min..letter.max) {
+            val coord = Coordinate.get(letter, l)
+            coord.render()
         }
     }
 
@@ -674,11 +768,9 @@ fun main() {
         var botTurn = botGoesFirst
         var firstMove = true
         var gameOver = false
-        var suggestions = MoveSuggestions()
+        var suggestions = MoveSuggestionSet()
         var timerKey = Any()
         var inputStr = ""
-        var altMode = false
-        var axisChar: Char? = null
 
         section {
             grid(Cols { fit(); fit() }) {
@@ -703,28 +795,10 @@ fun main() {
                                 textLine("[Enter] to make move")
                             }
                             if (suggestions.suggestAltMode) {
-                                textLine("[$ALT_MODE_CHAR] for selection along Z-axis")
+                                textLine("[$ALT_MODE_CHAR] to select line along Z-axis")
                             }
                             if (suggestions.suggestAltModeAxis) {
-                                textLine("Center column: $ALT_MODE_CHAR")
-                            }
-                            if (suggestions.letters.isNotEmpty()) {
-                                white {
-                                    text("Letters:    ")
-                                }
-                                suggestions.letters.sorted().forEach {
-                                    text("$it ")
-                                }
-                                textLine()
-                            }
-                            if (suggestions.numbers.isNotEmpty()) {
-                                white {
-                                    text("Numbers:    ")
-                                }
-                                suggestions.numbers.sorted().forEach {
-                                    text("$it ")
-                                }
-                                textLine()
+                                textLine("[$ALT_MODE_CHAR] to select marbles on center line")
                             }
                             if (suggestions.directions.isNotEmpty()) {
                                 white {
@@ -735,6 +809,7 @@ fun main() {
                                 }
                                 textLine()
                             }
+
                         }
                     } else {
                         botColour {
@@ -755,9 +830,7 @@ fun main() {
                         val move = getMove(game, inputStr)
                         if (move != null) {
                             inputStr = ""
-                            axisChar = null
-                            altMode = false
-                            suggestions = MoveSuggestions()
+                            suggestions = MoveSuggestionSet()
                             playerAction = move
                         }
                     }
@@ -818,16 +891,6 @@ fun main() {
                         if (!s.none()) {
                             inputStr = str
                             suggestions = s
-                            if (inputStr.isNotEmpty()) {
-                                altMode = inputStr.first() == ALT_MODE_CHAR
-                                axisChar = inputStr.first()
-                                if (altMode && inputStr.length > 1) {
-                                    axisChar = inputStr[1]
-                                }
-                            } else {
-                                altMode = false
-                                axisChar = null
-                            }
                         }
                     }
                 }
