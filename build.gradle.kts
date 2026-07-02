@@ -22,6 +22,10 @@ kotlin {
     }
 }
 
+java {
+    sourceCompatibility = JavaVersion.VERSION_1_8
+}
+
 dependencies {
     implementation("com.varabyte.kotter:kotter:1.3.0")
     testImplementation("com.varabyte.kotterx:kotter-test-support:1.3.0")

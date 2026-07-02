@@ -15,7 +15,6 @@ data class Settings(
     val botPiece get() = if (botGoesFirst) Piece.Black else Piece.White
     val humanPiece get() = if (botGoesFirst) Piece.White else Piece.Black
     companion object {
-        const val GAME_VERSION = "v1.0.0"
         const val WIDTH = 80
         const val HEIGHT = 40
         const val UI_WIDTH = WIDTH - 2
