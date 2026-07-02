@@ -5,6 +5,9 @@ import abalone.model.MoveDirection
 import abalone.model.LetterCoordinate as L
 import abalone.model.NumberCoordinate as N
 
+/**
+ * Parses the user's move string into an intermediate format used by the Parser.
+ */
 class Lexer {
 
     enum class IncompleteDirection {

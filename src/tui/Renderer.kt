@@ -22,9 +22,19 @@ import com.varabyte.kotterx.grid.Cols
 import com.varabyte.kotterx.grid.GridCharacters
 import com.varabyte.kotterx.grid.grid
 
+/**
+ * Describes the Kotter components used to draw the game screen.
+ */
 class Renderer {
+    /**
+     * Describes screens shown in the game program.
+     */
     class Screens {
         companion object {
+
+            /**
+             * Draw the main game screen.
+             */
             fun RenderScope.game(
                 game: StateRepresentation,
                 suggestions: MoveSuggestionSet,
@@ -113,6 +123,9 @@ class Renderer {
                 green { text("[Q]") }; textLine(" to quit")
             }
 
+            /**
+             * Draw the help screen.
+             */
             fun RenderScope.help() {
                 grid(Cols(Settings.UI_WIDTH - 10 - 1, 10), characters = GridCharacters.Invisible) {
                     cell(row = 0, col = 0, colSpan = 2) {
@@ -150,6 +163,9 @@ class Renderer {
                 }
             }
 
+            /**
+             * Prompt the user for game settings.
+             */
             fun Session.settings(): Settings {
                 val settings = Settings()
                 section {
@@ -233,6 +249,9 @@ class Renderer {
         private val RenderScope.cellHighlight: RenderScope.(Char) -> Unit
             get() = { c -> white(layer = BG) { black { text(c) } } }
 
+        /**
+         * Convert a MoveDirection to a character to be displayed.
+         */
         fun arrow(direction: MoveDirection): Char {
             return when (direction) {
                 MoveDirection.NegX -> Characters.LEFT

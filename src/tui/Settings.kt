@@ -3,6 +3,9 @@ package tui
 import abalone.model.BoardState
 import abalone.model.Piece
 
+/**
+ * Settings for the game display.
+ */
 data class Settings(
     var MaxSearchDepth: Int = 7,
     var botGoesFirst: Boolean = true,

@@ -4,11 +4,14 @@ import abalone.model.*
 import abalone.model.LetterCoordinate as L
 import abalone.model.NumberCoordinate as N
 
+/**
+ * Responsible for parsing the output of the Lexer into model objects, e.g. Coordinates and Actions.
+ */
 class Parser {
     companion object {
 
         /**
-         * Parse coordinates.
+         * Parse coordinates from the output of the Lexer.
          *
          * @return the parsed coordinates in regular space, or null if there was a problem parsing.
          */
@@ -87,6 +90,11 @@ class Parser {
             return parsedCoordinates
         }
 
+        /**
+         * Convert the output of the Lexer into an Action.
+         * @param state the game state.
+         * @param lexed the output of the Lexer.
+         */
         fun action(state: StateRepresentation, lexed: Lexed): Action? {
             val board = state.board.cells
 

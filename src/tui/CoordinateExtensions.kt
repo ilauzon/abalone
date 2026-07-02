@@ -38,6 +38,9 @@ fun SimpleCoordinate.alt(): SimpleCoordinate {
     }
 }
 
+/**
+ * The side of the Z-axis the coordinate lies on.
+ */
 fun SimpleCoordinate.side(): BoardSide {
     val difference = letter.ordinal - number.ordinal
     return when {
@@ -47,14 +50,25 @@ fun SimpleCoordinate.side(): BoardSide {
     }
 }
 
+/**
+ * Transform a coordinate to a coordinate described w.r.t. the Z-axis of the board.
+ *
+ * @return the transformed coordinate.
+ */
 fun Coordinate.alt(): SimpleCoordinate {
     return SimpleCoordinate(letter, number).alt()
 }
 
+/**
+ * The side of the Z-axis the coordinate lies on.
+ */
 fun Coordinate.side(): BoardSide {
     return SimpleCoordinate(letter, number).side()
 }
 
+/**
+ * Convert a coordinate to one with no constraints on letter-number combinations.
+ */
 fun Coordinate.simple(): SimpleCoordinate {
     return SimpleCoordinate(letter, number)
 }

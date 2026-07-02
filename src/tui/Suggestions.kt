@@ -32,6 +32,9 @@ private fun Action.line(): SelectionAxis? {
     return SelectionAxis.Z
 }
 
+/**
+ * Get the characters available for the user to type their next move.
+ */
 fun suggestions(state: StateRepresentation, str: String): MoveSuggestionSet {
     val suggestions = MoveSuggestionSet()
     val lexed = Lexer.move(str) ?: return suggestions
@@ -210,6 +213,9 @@ fun suggestions(state: StateRepresentation, str: String): MoveSuggestionSet {
     return suggestions
 }
 
+/**
+ * Suggestions for the user's next move.
+ */
 data class MoveSuggestionSet(
     val letters: MutableSet<L> = mutableSetOf(),
     val numbers: MutableSet<N> = mutableSetOf(),

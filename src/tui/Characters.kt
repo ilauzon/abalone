@@ -1,5 +1,6 @@
 package tui
 
+/** Characters used in the game display. */
 class Characters {
     companion object {
         const val UP = '↑'
