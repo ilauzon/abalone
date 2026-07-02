@@ -150,6 +150,7 @@ fun main() {
                     game = newGameState
                     if (StateSearcher.terminalTest(game)) {
                         gameOver = true
+                        repeat = false
                         rerender()
                         return@addTimer
                     }
@@ -163,6 +164,7 @@ fun main() {
                     game = newGameState
                     if (StateSearcher.terminalTest(game)) {
                         gameOver = true
+                        repeat = false
                         rerender()
                         return@addTimer
                     }
@@ -170,10 +172,6 @@ fun main() {
                     firstMove = false
                     botTurn = !botTurn
                     rerender()
-                }
-
-                if (gameOver) {
-                    repeat = false
                 }
             }
         }

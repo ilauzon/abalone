@@ -46,10 +46,12 @@ class Renderer {
             ) {
                 val humanScore = game.players[settings.humanPiece]!!.score
                 val botScore = game.players[settings.botPiece]!!.score
-                val status = if (humanScore >= 6 || humanScore > botScore) "You win!"
-                else if (botScore >= 6 || botScore > humanScore) "Bot wins."
-                else if (StateSearcher.terminalTest(game)) "Tie game."
-                else ""
+                var status = ""
+                if (StateSearcher.terminalTest(game)) {
+                    status = if (humanScore >= 6 || humanScore > botScore) "You win!"
+                    else if (botScore >= 6 || botScore > humanScore) "Bot wins."
+                    else "Tie game."
+                }
                 grid(cols = Cols { fit(); fit() }, characters = GridCharacters.Invisible) {
                     cell(col = 0) {
                         board(game, suggestions, settings)
@@ -86,38 +88,41 @@ class Renderer {
                         }
                     }
                 }
-                if (!botTurn) {
-                    grid(cols = Cols(40)) {
-                        cell {
-                            text(" Your move: ")
-                            text(inputStr)
-                            if (blinkOn) {
-                                invert { text(' ') }
-                            }
-                            textLine()
-                        }
-                    }
-                    green {
-                        if (suggestions.isCompleteMove) {
-                            text("[Enter] to make move")
-                        } else if (suggestions.directions.isNotEmpty()) {
-                            white {
-                                text("Directions: ")
-                            }
-                            suggestions.directions.sorted().forEach {
-                                text("${arrow(it)} ")
+                if (!StateSearcher.terminalTest(game)) {
+                    if (!botTurn) {
+                        grid(cols = Cols(40)) {
+                            cell {
+                                text(" Your move: ")
+                                text(inputStr)
+                                if (blinkOn) {
+                                    invert { text(' ') }
+                                }
+                                textLine()
                             }
                         }
-                    }
-                } else {
-                    grid(cols = Cols(Settings.UI_WIDTH), characters = GridCharacters.Invisible) {
-                        cell {
-                            botColour {
-                                textLine("Bot moving...")
+                        green {
+                            if (suggestions.isCompleteMove) {
+                                text("[Enter] to make move")
+                            } else if (suggestions.directions.isNotEmpty()) {
+                                white {
+                                    text("Directions: ")
+                                }
+                                suggestions.directions.sorted().forEach {
+                                    text("${arrow(it)} ")
+                                }
+                            }
+                        }
+                    } else {
+                        grid(cols = Cols(Settings.UI_WIDTH), characters = GridCharacters.Invisible) {
+                            cell {
+                                botColour {
+                                    textLine("Bot moving...")
+                                }
                             }
                         }
                     }
                 }
+
                 textLine(status)
                 green { text("[Esc]") }; textLine(" to see help menu")
                 green { text("[Q]") }; textLine(" to quit")
@@ -152,7 +157,7 @@ class Renderer {
                         green { textLine("[D,C,B,A,${Characters.ALT_MODE_CHAR},1,2,3,4]") }; textLine("  Select line of marbles along the Z-axis")
                         green { textLine("[Arrow keys]") }; textLine(
                         "  Select direction to move the line of marbles. Combine them to\n" +
-                                "  move along Y and Z axes ([${Characters.DOWN}] plus [${Characters.LEFT}] equals [${Characters.DOWN_LEFT}])\n])"
+                                "  move along Y and Z axes ([${Characters.DOWN}] plus [${Characters.LEFT}] equals [${Characters.DOWN_LEFT}])."
                     );
                         green { textLine("[Enter]") }; textLine("  Move");
                         green { textLine("[Q]") }; textLine("  Quit");
