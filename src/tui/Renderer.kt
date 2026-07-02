@@ -2,6 +2,7 @@ package tui
 
 import abalone.model.*
 import abalone.model.search.StateSearcher
+import com.varabyte.kotter.foundation.input.*
 import abalone.model.LetterCoordinate as L
 import abalone.model.NumberCoordinate as N
 import com.varabyte.kotter.foundation.text.ColorLayer.BG
@@ -15,6 +16,7 @@ import com.varabyte.kotter.foundation.text.text
 import com.varabyte.kotter.foundation.text.textLine
 import com.varabyte.kotter.foundation.text.underline
 import com.varabyte.kotter.foundation.text.white
+import com.varabyte.kotter.runtime.Session
 import com.varabyte.kotter.runtime.render.RenderScope
 import com.varabyte.kotterx.grid.Cols
 import com.varabyte.kotterx.grid.GridCharacters
@@ -26,19 +28,21 @@ class Renderer {
             fun RenderScope.game(
                 game: StateRepresentation,
                 suggestions: MoveSuggestionSet,
+                settings: Settings,
                 botTurn: Boolean,
                 inputStr: String,
                 blinkOn: Boolean,
+                lastAction: Action?
             ) {
-                val humanScore = game.players[Settings.humanPiece]!!.score
-                val botScore = game.players[Settings.botPiece]!!.score
+                val humanScore = game.players[settings.humanPiece]!!.score
+                val botScore = game.players[settings.botPiece]!!.score
                 val status = if (humanScore >= 6 || humanScore > botScore) "You win!"
                 else if (botScore >= 6 || botScore > humanScore) "Bot wins."
                 else if (StateSearcher.terminalTest(game)) "Tie game."
                 else ""
                 grid(cols = Cols { fit(); fit() }, characters = GridCharacters.Invisible) {
                     cell(col = 0) {
-                        board(game, suggestions)
+                        board(game, suggestions, settings)
                         // give the board some breathing room on the right
                         text("              ")
                     }
@@ -48,10 +52,25 @@ class Renderer {
                                 text(" ")
                                 underline { text("SCORE") }; textLine(" ")
                                 humanColour {
-                                    textLine(" You: ${game.players[Settings.humanPiece]!!.score} ")
+                                    textLine(" You: ${game.players[settings.humanPiece]!!.score} ")
                                 }
                                 botColour {
-                                    textLine(" Bot: ${game.players[Settings.botPiece]!!.score} ")
+                                    textLine(" Bot: ${game.players[settings.botPiece]!!.score} ")
+                                }
+                            }
+                        }
+                        textLine("Moves left:\n${game.movesRemaining}")
+                        textLine()
+
+                        if (lastAction != null) {
+                            textLine("Last move:")
+                            if (!botTurn) {
+                                botColour {
+                                    textLine(lastAction.toString())
+                                }
+                            } else {
+                                humanColour {
+                                    textLine(lastAction.toString())
                                 }
                             }
                         }
@@ -130,6 +149,73 @@ class Renderer {
                     }
                 }
             }
+
+            fun Session.settings(): Settings {
+                val settings = Settings()
+                section {
+                    text("Select layout: "); input()
+                    textLine()
+                    for (layout in BoardState.Layout.entries) {
+                        textLine("  ${layout.ordinal + 1}. ${layout.name.lowercase().capitalize().replace("_", " ")}")
+                    }
+                }.runUntilInputEntered {
+                    onInputChanged {
+                        if (input.isEmpty()) return@onInputChanged
+                        val inputInt = input.toIntOrNull()
+                        if (inputInt == null) {
+                            rejectInput()
+                            return@onInputChanged
+                        }
+                        val inputLayout = BoardState.Layout.entries.getOrNull(inputInt - 1)
+                        if (inputLayout == null) {
+                            rejectInput()
+                            return@onInputChanged
+                        }
+                        settings.layout = inputLayout
+                    }
+                }
+                section {
+                    text("First move by: "); input()
+                    textLine()
+                    text("  1. "); humanColour { textLine("You") }
+                    text("  2. "); botColour { text("Bot")}; textLine(" (makes random first move)")
+                }.runUntilInputEntered {
+                    onInputChanged {
+                        if (input.isEmpty()) return@onInputChanged
+                        val inputInt = input.toIntOrNull()
+                        if (inputInt == null) {
+                            rejectInput()
+                            return@onInputChanged
+                        }
+                        if (inputInt == 1) {
+                            settings.botGoesFirst = false
+                        } else if (inputInt == 2) {
+                            settings.botGoesFirst = true
+                        } else {
+                            rejectInput()
+                        }
+                    }
+                }
+                section {
+                    text("Difficulty (1-8): "); input()
+                    textLine()
+                }.runUntilInputEntered {
+                    onInputChanged {
+                        if (input.isEmpty()) return@onInputChanged
+                        val inputInt = input.toIntOrNull()
+                        if (inputInt == null) {
+                            rejectInput()
+                            return@onInputChanged
+                        }
+                        if (!(1..8).contains(inputInt)) {
+                            rejectInput()
+                            return@onInputChanged
+                        }
+                        settings.MaxSearchDepth = inputInt
+                    }
+                }
+                return settings
+            }
         }
     }
 
@@ -158,7 +244,7 @@ class Renderer {
             }
         }
 
-        private fun RenderScope.board(game: StateRepresentation, suggestions: MoveSuggestionSet) {
+        private fun RenderScope.board(game: StateRepresentation, suggestions: MoveSuggestionSet, settings: Settings) {
             fun Coordinate.render() {
                 val piece = game.board.cells[this]
                 var pixel: RenderScope.(c: Char) -> Unit = { c -> text(c) }
@@ -177,7 +263,7 @@ class Renderer {
                     }
 
                     Piece.Black -> {
-                        if (Settings.botPiece == Piece.Black) {
+                        if (settings.botPiece == Piece.Black) {
                             botColour {
                                 pixel(Characters.BLACK_PIECE)
                             }
@@ -189,7 +275,7 @@ class Renderer {
                     }
 
                     Piece.White -> {
-                        if (Settings.botPiece == Piece.White) {
+                        if (settings.botPiece == Piece.White) {
                             botColour {
                                 pixel(Characters.WHITE_PIECE)
                             }

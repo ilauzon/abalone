@@ -5,12 +5,14 @@ import com.varabyte.kotter.foundation.text.*
 import com.varabyte.kotter.foundation.timer.*
 import com.varabyte.kotter.runtime.terminal.TerminalSize
 import com.varabyte.kotter.terminal.virtual.*
+import com.varabyte.kotter.terminal.system.SystemTerminal
+
 import abalone.model.*
 import abalone.model.search.*
-import com.varabyte.kotter.terminal.system.SystemTerminal
 import tui.*
 import tui.Renderer.Screens.Companion.game as gameScreen
 import tui.Renderer.Screens.Companion.help as helpScreen
+import tui.Renderer.Screens.Companion.settings as settingsScreen
 
 fun main() {
     session(
@@ -20,19 +22,21 @@ fun main() {
         ).firstSuccess(),
         clearTerminal = true,
     ) {
+        val settings = settingsScreen()
 
         var game = StateRepresentation(
-            BoardState(Settings.layout),
-            movesRemaining = Settings.maxMoves,
+            BoardState(settings.layout),
+            movesRemaining = settings.maxMoves,
             currentPlayer = Piece.Black
         )
         val bot = StateSearcher(IsaacHeuristic())
-        var botTurn = Settings.botGoesFirst
+        var botTurn = settings.botGoesFirst
         var firstMove = true
         var gameOver = false
         var suggestions = MoveSuggestionSet()
         var timerKey = Any()
         var inputStr = ""
+        var lastAction: Action? = null
 
         // caret blinking
         val BLINK_LEN = 500
@@ -42,11 +46,10 @@ fun main() {
         var helpMenuShowing by liveVarOf(false)
 
         section {
-            underline { text("ABALONE ${Settings.GAME_VERSION}") }
             if (helpMenuShowing) {
                 helpScreen()
             } else {
-                gameScreen(game, suggestions, botTurn, inputStr, blinkOn)
+                gameScreen(game, suggestions, settings, botTurn, inputStr, blinkOn, lastAction)
             }
         }.runUntilSignal {
 
@@ -141,7 +144,8 @@ fun main() {
 
                 if (botTurn) {
                     rerender()
-                    val botAction = bot.search(game, Settings.MaxSearchDepth, firstMove)
+                    val botAction = bot.search(game, settings.MaxSearchDepth, firstMove)
+                    lastAction = botAction
                     newGameState = StateSpaceGenerator.result(game, botAction)
                     game = newGameState
                     if (StateSearcher.terminalTest(game)) {
@@ -154,6 +158,7 @@ fun main() {
                     botTurn = !botTurn
                     rerender()
                 } else if (playerAction != null) { // the control flow bumps into this 60 times a second until the player has moved
+                    lastAction = playerAction
                     newGameState = StateSpaceGenerator.result(game, playerAction!!)
                     game = newGameState
                     if (StateSearcher.terminalTest(game)) {
