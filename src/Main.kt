@@ -33,7 +33,7 @@ fun main() {
         var botTurn = settings.botGoesFirst
         var firstMove = true
         var gameOver = false
-        var suggestions = MoveSuggestionSet()
+        var suggestions = suggestions(game, "")
         var timerKey = Any()
         var inputStr = ""
         var lastAction: Action? = null
@@ -73,6 +73,8 @@ fun main() {
                     Keys.Escape -> helpMenuShowing = !helpMenuShowing
 
                     Keys.Q -> signal()
+
+                    Keys.T -> Renderer.toggleColours()
 
                     else -> {
                         if (helpMenuShowing) return@onKeyPressed

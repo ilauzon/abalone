@@ -8,6 +8,8 @@ import abalone.model.NumberCoordinate as N
 import com.varabyte.kotter.foundation.text.ColorLayer.BG
 import com.varabyte.kotter.foundation.text.black
 import com.varabyte.kotter.foundation.text.blue
+import com.varabyte.kotter.foundation.text.clearColor
+import com.varabyte.kotter.foundation.text.color
 import com.varabyte.kotter.foundation.text.green
 import com.varabyte.kotter.foundation.text.invert
 import com.varabyte.kotter.foundation.text.red
@@ -18,6 +20,7 @@ import com.varabyte.kotter.foundation.text.underline
 import com.varabyte.kotter.foundation.text.white
 import com.varabyte.kotter.runtime.Session
 import com.varabyte.kotter.runtime.render.RenderScope
+import com.varabyte.kotter.runtime.terminal.Terminal
 import com.varabyte.kotterx.grid.Cols
 import com.varabyte.kotterx.grid.GridCharacters
 import com.varabyte.kotterx.grid.grid
@@ -100,11 +103,11 @@ class Renderer {
                                 textLine()
                             }
                         }
-                        green {
+                        inputHighlight {
                             if (suggestions.isCompleteMove) {
                                 text("[Enter] to make move")
                             } else if (suggestions.directions.isNotEmpty()) {
-                                white {
+                                clearColor {
                                     text("Directions: ")
                                 }
                                 suggestions.directions.sorted().forEach {
@@ -124,8 +127,8 @@ class Renderer {
                 }
 
                 textLine(status)
-                green { text("[Esc]") }; textLine(" to see help menu")
-                green { text("[Q]") }; textLine(" to quit")
+                inputHighlight { text("[Esc]") }; textLine(" to see help menu")
+                inputHighlight { text("[Q]") }; textLine(" to quit")
             }
 
             /**
@@ -151,17 +154,18 @@ class Renderer {
                         )
                     }
                     cell(row = 1, col = 0) {
-                        green { textLine("[A,B,C,D,E,F,G,H,I]") }; textLine("  Select line of marbles along the X-axis")
-                        green { textLine("[1,2,3,4,5,6,7,8,9]") }; textLine("  Select line of marbles along the Y-axis")
-                        green { textLine("[${Characters.ALT_MODE_CHAR}]") }; textLine("  Toggle selecting along the Z-axis");
-                        green { textLine("[D,C,B,A,${Characters.ALT_MODE_CHAR},1,2,3,4]") }; textLine("  Select line of marbles along the Z-axis")
-                        green { textLine("[Arrow keys]") }; textLine(
+                        inputHighlight { textLine("[A,B,C,D,E,F,G,H,I]") }; textLine("  Select line of marbles along the X-axis")
+                        inputHighlight { textLine("[1,2,3,4,5,6,7,8,9]") }; textLine("  Select line of marbles along the Y-axis")
+                        inputHighlight { textLine("[${Characters.ALT_MODE_CHAR}]") }; textLine("  Toggle selecting along the Z-axis");
+                        inputHighlight { textLine("[D,C,B,A,${Characters.ALT_MODE_CHAR},1,2,3,4]") }; textLine("  Select line of marbles along the Z-axis")
+                        inputHighlight { textLine("[Arrow keys]") }; textLine(
                         "  Select direction to move the line of marbles. Combine them to\n" +
                                 "  move along Y and Z axes ([${Characters.DOWN}] plus [${Characters.LEFT}] equals [${Characters.DOWN_LEFT}])."
                     );
-                        green { textLine("[Enter]") }; textLine("  Move");
-                        green { textLine("[Q]") }; textLine("  Quit");
-                        green { textLine("[Esc]") }; textLine("  Toggle this menu");
+                        inputHighlight { textLine("[Enter]") }; textLine("  Move");
+                        inputHighlight { textLine("[Q]") }; textLine("  Quit");
+                        inputHighlight { textLine("[T]") }; textLine("  Toggle colours");
+                        inputHighlight { textLine("[Esc]") }; textLine("  Toggle this menu");
                         textLine()
                         textLine("HINT: The labels on the edge of the board will tell you what \n      moves are possible.")
                     }
@@ -241,18 +245,35 @@ class Renderer {
     }
 
     companion object {
-        private val RenderScope.humanColour: RenderScope.(RenderScope.() -> Unit) -> Unit
-            get() = { scopedBlock -> blue { scopedBlock() } }
-        private val RenderScope.botColour: RenderScope.(RenderScope.() -> Unit) -> Unit
-            get() = { scopedBlock -> red { scopedBlock() } }
-        private val RenderScope.disabledLabel: RenderScope.(RenderScope.() -> Unit) -> Unit
-            get() = { scopedBlock -> rgb(0x333333) { scopedBlock() } }
-        private val RenderScope.label: RenderScope.(RenderScope.() -> Unit) -> Unit
-            get() = { scopedBlock -> green { scopedBlock() } }
-        private val RenderScope.lineHighlight: RenderScope.(Char) -> Unit
-            get() = { c -> rgb(0x333333, layer = BG) { text(c) } }
-        private val RenderScope.cellHighlight: RenderScope.(Char) -> Unit
-            get() = { c -> white(layer = BG) { black { text(c) } } }
+        private var humanColour: RenderScope.(RenderScope.() -> Unit) -> Unit = { scopedBlock -> blue { scopedBlock() }}
+        private var botColour: RenderScope.(RenderScope.() -> Unit) -> Unit = { scopedBlock -> red { scopedBlock() } }
+        private var disabledLabel: RenderScope.(RenderScope.() -> Unit) -> Unit = { scopedBlock -> scopedBlock() }
+        private var label: RenderScope.(RenderScope.() -> Unit) -> Unit = { scopedBlock -> green { scopedBlock() } }
+        private var lineHighlight: RenderScope.(Char) -> Unit = { c -> underline { text(c) } }
+        private var inputHighlight: RenderScope.(RenderScope.() -> Unit) -> Unit = { scopedBlock -> green { scopedBlock() } }
+        private var cellHighlight: RenderScope.(Char) -> Unit = { c -> invert { text(c) }  }
+
+        var coloursOn = true
+            private set
+
+        fun toggleColours() {
+            if (coloursOn) {
+                humanColour = { scopedBlock -> scopedBlock() }
+                botColour = { scopedBlock -> scopedBlock() }
+                disabledLabel = { scopedBlock ->  scopedBlock() }
+                label = { scopedBlock -> underline { scopedBlock() } }
+                inputHighlight = { scopedBlock -> underline { scopedBlock() } }
+            } else {
+                humanColour = { scopedBlock -> blue { scopedBlock() }}
+                botColour = { scopedBlock -> red { scopedBlock() } }
+                disabledLabel = { scopedBlock -> scopedBlock() }
+                label = { scopedBlock -> green { scopedBlock() } }
+                lineHighlight = { c -> underline { text(c) } }
+                inputHighlight = { scopedBlock -> green { scopedBlock() } }
+                cellHighlight = { c -> invert { text(c) }  }
+            }
+            coloursOn = !coloursOn
+        }
 
         /**
          * Convert a MoveDirection to a character to be displayed.
@@ -402,14 +423,14 @@ class Renderer {
             val numberChar = number.toString()[0]
             val simple = SimpleCoordinate(letter, number)
             if (suggestions.userInput.axis == SelectionAxis.X &&
-                suggestions.numbers.contains(number) &&
+                (suggestions.numbers.contains(number) || suggestions.userInput.coordinates.contains(this)) &&
                 suggestions.userInput.axisIndexer == letterChar
             ) {
                 return numberChar
             }
 
             if (suggestions.userInput.axis == SelectionAxis.Y &&
-                suggestions.letters.contains(letter) &&
+                (suggestions.letters.contains(letter) || suggestions.userInput.coordinates.contains(this)) &&
                 suggestions.userInput.axisIndexer == numberChar
             ) {
                 return letterChar
@@ -422,17 +443,17 @@ class Renderer {
                 val altNumberChar = alt.number.toString()[0]
                 if (side == BoardSide.MIDDLE &&
                     suggestions.userInput.axisIndexer == Characters.ALT_MODE_CHAR &&
-                    suggestions.numbers.contains(number)
+                    (suggestions.numbers.contains(number) || suggestions.userInput.coordinates.contains(this))
                 ) {
                     return numberChar
                 }
                 if (suggestions.userInput.axisIndexer == altLetterChar &&
-                    suggestions.numbers.contains(number)
+                    (suggestions.numbers.contains(number) || suggestions.userInput.coordinates.contains(this))
                 ) {
                     return altNumberChar
                 }
                 if (suggestions.userInput.axisIndexer == altNumberChar &&
-                    suggestions.letters.contains(letter)
+                    (suggestions.letters.contains(letter) || suggestions.userInput.coordinates.contains(this))
                 ) {
                     return altLetterChar
                 }
