@@ -2,7 +2,7 @@
  * Houses the state space generator.
  */
 
-package abalone.model
+package ca.isaaclauzon.abalone.model
 
 class StateSpaceGenerator {
 

@@ -1,8 +1,8 @@
-package abalone.model.search
+package ca.isaaclauzon.abalone.model.search
 
-import abalone.model.Piece
-import abalone.model.Action
-import abalone.model.BoardMap
+import ca.isaaclauzon.abalone.model.Piece
+import ca.isaaclauzon.abalone.model.Action
+import ca.isaaclauzon.abalone.model.BoardMap
 import java.util.LinkedHashMap
 import kotlin.random.Random
 

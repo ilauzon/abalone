@@ -1,12 +1,12 @@
-package tui
+package ca.isaaclauzon.abalone.tui
 
-import abalone.model.Action
-import abalone.model.Coordinate
-import abalone.model.MoveDirection
-import abalone.model.StateRepresentation
-import abalone.model.StateSpaceGenerator
-import abalone.model.LetterCoordinate as L
-import abalone.model.NumberCoordinate as N
+import ca.isaaclauzon.abalone.model.Action
+import ca.isaaclauzon.abalone.model.Coordinate
+import ca.isaaclauzon.abalone.model.MoveDirection
+import ca.isaaclauzon.abalone.model.StateRepresentation
+import ca.isaaclauzon.abalone.model.StateSpaceGenerator
+import ca.isaaclauzon.abalone.model.LetterCoordinate as L
+import ca.isaaclauzon.abalone.model.NumberCoordinate as N
 
 private fun Action.line(): SelectionAxis? {
     if (coordinates.isEmpty()) return null

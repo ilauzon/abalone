@@ -6,12 +6,12 @@ import com.varabyte.kotter.runtime.terminal.TerminalSize
 import com.varabyte.kotter.terminal.virtual.*
 import com.varabyte.kotter.terminal.system.SystemTerminal
 
-import abalone.model.*
-import abalone.model.search.*
-import tui.*
-import tui.Renderer.Screens.Companion.game as gameScreen
-import tui.Renderer.Screens.Companion.help as helpScreen
-import tui.Renderer.Screens.Companion.settings as settingsScreen
+import ca.isaaclauzon.abalone.model.*
+import ca.isaaclauzon.abalone.model.search.*
+import ca.isaaclauzon.abalone.tui.*
+import ca.isaaclauzon.abalone.tui.Renderer.Screens.Companion.game as gameScreen
+import ca.isaaclauzon.abalone.tui.Renderer.Screens.Companion.help as helpScreen
+import ca.isaaclauzon.abalone.tui.Renderer.Screens.Companion.settings as settingsScreen
 
 fun main() {
     session(

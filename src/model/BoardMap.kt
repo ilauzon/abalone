@@ -1,8 +1,8 @@
-package abalone.model
+package ca.isaaclauzon.abalone.model
 
 import kotlin.random.Random
-import abalone.model.LetterCoordinate as L
-import abalone.model.NumberCoordinate as N
+import ca.isaaclauzon.abalone.model.LetterCoordinate as L
+import ca.isaaclauzon.abalone.model.NumberCoordinate as N
 
 /**
  * A map to be used only for the Abalone board. Contains only get and set methods

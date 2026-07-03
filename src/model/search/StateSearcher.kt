@@ -1,11 +1,11 @@
-package abalone.model.search
+package ca.isaaclauzon.abalone.model.search
 
-import abalone.model.Piece
-import abalone.model.Action
-import abalone.model.StateRepresentation
-import abalone.model.StateSpaceGenerator.Companion.actions
-import abalone.model.StateSpaceGenerator.Companion.expand
-import abalone.model.StateSpaceGenerator.Companion.result
+import ca.isaaclauzon.abalone.model.Piece
+import ca.isaaclauzon.abalone.model.Action
+import ca.isaaclauzon.abalone.model.StateRepresentation
+import ca.isaaclauzon.abalone.model.StateSpaceGenerator.Companion.actions
+import ca.isaaclauzon.abalone.model.StateSpaceGenerator.Companion.expand
+import ca.isaaclauzon.abalone.model.StateSpaceGenerator.Companion.result
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.concurrent.thread
 import kotlin.math.max

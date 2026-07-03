@@ -1,4 +1,4 @@
-package abalone.model
+package ca.isaaclauzon.abalone.model
 
 /**
  * Represents all possible directions of movement.

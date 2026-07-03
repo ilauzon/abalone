@@ -1,4 +1,4 @@
-package abalone.model
+package ca.isaaclauzon.abalone.model
 
 enum class Piece {
     Empty, Black, White, OffBoard;

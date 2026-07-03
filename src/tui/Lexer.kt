@@ -1,9 +1,9 @@
-package tui
+package ca.isaaclauzon.abalone.tui
 
-import abalone.model.Coordinate
-import abalone.model.MoveDirection
-import abalone.model.LetterCoordinate as L
-import abalone.model.NumberCoordinate as N
+import ca.isaaclauzon.abalone.model.Coordinate
+import ca.isaaclauzon.abalone.model.MoveDirection
+import ca.isaaclauzon.abalone.model.LetterCoordinate as L
+import ca.isaaclauzon.abalone.model.NumberCoordinate as N
 
 /**
  * Parses the user's move string into an intermediate format used by the Parser.

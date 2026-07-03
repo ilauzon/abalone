@@ -1,6 +1,6 @@
-package abalone.model.search
+package ca.isaaclauzon.abalone.model.search
 
-import abalone.model.*
+import ca.isaaclauzon.abalone.model.*
 import kotlin.math.abs
 
 /**

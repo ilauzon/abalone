@@ -1,7 +1,7 @@
-package abalone.model
+package ca.isaaclauzon.abalone.model
 
 import java.io.File
-import java.util.Date
+import kotlin.collections.forEach
 
 /**
  * Static class that provides functions for reading, parsing, and writing .input, .board, and .move

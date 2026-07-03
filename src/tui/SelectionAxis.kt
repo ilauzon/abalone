@@ -1,4 +1,4 @@
-package tui
+package ca.isaaclauzon.abalone.tui
 
 /** The axes of the game board. */
 enum class SelectionAxis {

@@ -1,7 +1,7 @@
-package tui
+package ca.isaaclauzon.abalone.tui
 
-import abalone.model.BoardState
-import abalone.model.Piece
+import ca.isaaclauzon.abalone.model.BoardState
+import ca.isaaclauzon.abalone.model.Piece
 
 /**
  * Settings for the game display.

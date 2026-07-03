@@ -1,7 +1,7 @@
-package abalone.model
+package ca.isaaclauzon.abalone.model
 
-import abalone.model.LetterCoordinate as LetterC
-import abalone.model.NumberCoordinate as NumberC
+import ca.isaaclauzon.abalone.model.LetterCoordinate as LetterC
+import ca.isaaclauzon.abalone.model.NumberCoordinate as NumberC
 
 /**
  * The state representation of the game. Contains all the information needed for the search

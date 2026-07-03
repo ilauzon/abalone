@@ -1,4 +1,4 @@
-package tui
+package ca.isaaclauzon.abalone.tui
 
 /** Characters used in the game display. */
 class Characters {

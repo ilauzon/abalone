@@ -1,4 +1,4 @@
-package abalone.model
+package ca.isaaclauzon.abalone.model
 
 /**
  * Can be thrown when a part of the state space generation determines that a move is invalid.

@@ -1,8 +1,8 @@
-package tui
+package ca.isaaclauzon.abalone.tui
 
-import abalone.model.*
-import abalone.model.LetterCoordinate as L
-import abalone.model.NumberCoordinate as N
+import ca.isaaclauzon.abalone.model.*
+import ca.isaaclauzon.abalone.model.LetterCoordinate as L
+import ca.isaaclauzon.abalone.model.NumberCoordinate as N
 
 /**
  * Responsible for parsing the output of the Lexer into model objects, e.g. Coordinates and Actions.

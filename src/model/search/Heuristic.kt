@@ -1,6 +1,6 @@
-package abalone.model.search
+package ca.isaaclauzon.abalone.model.search
 
-import abalone.model.StateRepresentation
+import ca.isaaclauzon.abalone.model.StateRepresentation
 
 /**
  * Interface containing a heuristic function, which can be used in an agent's evaluation function.

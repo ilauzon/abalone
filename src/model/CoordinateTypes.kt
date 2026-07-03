@@ -2,7 +2,7 @@
  * Houses the Coordinate, VerticalCoordinate, and HorizontalCoordinate classes, which all
  * manage the coordinate system of marbles.
  */
-package abalone.model
+package ca.isaaclauzon.abalone.model
 
 import java.lang.IllegalArgumentException
 import kotlin.math.*

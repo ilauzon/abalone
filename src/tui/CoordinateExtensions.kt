@@ -1,6 +1,6 @@
-package tui
+package ca.isaaclauzon.abalone.tui
 
-import abalone.model.Coordinate
+import ca.isaaclauzon.abalone.model.Coordinate
 
 /**
  * Transform a coordinate described w.r.t. the Z-axis of the board to a coordinate in regular space.

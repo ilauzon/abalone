@@ -1,4 +1,4 @@
-package tui
+package ca.isaaclauzon.abalone.tui
 
 /**
  * A side of the game board's Z-axis.

@@ -1,10 +1,10 @@
-package tui
+package ca.isaaclauzon.abalone.tui
 
-import abalone.model.*
-import abalone.model.search.StateSearcher
+import ca.isaaclauzon.abalone.model.*
+import ca.isaaclauzon.abalone.model.search.StateSearcher
+import ca.isaaclauzon.abalone.model.LetterCoordinate as L
+import ca.isaaclauzon.abalone.model.NumberCoordinate as N
 import com.varabyte.kotter.foundation.input.*
-import abalone.model.LetterCoordinate as L
-import abalone.model.NumberCoordinate as N
 import com.varabyte.kotter.foundation.text.ColorLayer.BG
 import com.varabyte.kotter.foundation.text.black
 import com.varabyte.kotter.foundation.text.blue
