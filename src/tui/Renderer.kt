@@ -42,7 +42,6 @@ class Renderer {
                 game: StateRepresentation,
                 suggestions: MoveSuggestionSet,
                 settings: Settings,
-                botTurn: Boolean,
                 inputStr: String,
                 blinkOn: Boolean,
                 lastAction: Action?
@@ -55,6 +54,7 @@ class Renderer {
                     else if (botScore >= 6 || botScore > humanScore) "Bot wins."
                     else "Tie game."
                 }
+                val botTurn = if (settings.botGoesFirst) game.movesRemaining % 2 == 0 else game.movesRemaining % 2 == 1
                 grid(cols = Cols { fit(); fit() }, characters = GridCharacters.Invisible) {
                     cell(col = 0) {
                         board(game, suggestions, settings)

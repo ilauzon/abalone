@@ -1,7 +1,6 @@
 import com.varabyte.kotter.foundation.*
 import com.varabyte.kotter.foundation.anim.*
 import com.varabyte.kotter.foundation.input.*
-import com.varabyte.kotter.foundation.text.*
 import com.varabyte.kotter.foundation.timer.*
 import com.varabyte.kotter.runtime.terminal.TerminalSize
 import com.varabyte.kotter.terminal.virtual.*
@@ -32,7 +31,6 @@ fun main() {
         val bot = StateSearcher(IsaacHeuristic())
         var botTurn = settings.botGoesFirst
         var firstMove = true
-        var gameOver = false
         var suggestions = suggestions(game, "")
         var timerKey = Any()
         var inputStr = ""
@@ -49,7 +47,7 @@ fun main() {
             if (helpMenuShowing) {
                 helpScreen()
             } else {
-                gameScreen(game, suggestions, settings, botTurn, inputStr, blinkOn, lastAction)
+                gameScreen(game, suggestions, settings, inputStr, blinkOn, lastAction)
             }
         }.runUntilSignal {
 
@@ -151,7 +149,6 @@ fun main() {
                     newGameState = StateSpaceGenerator.result(game, botAction)
                     game = newGameState
                     if (StateSearcher.terminalTest(game)) {
-                        gameOver = true
                         repeat = false
                         rerender()
                         return@addTimer
@@ -165,7 +162,6 @@ fun main() {
                     newGameState = StateSpaceGenerator.result(game, playerAction!!)
                     game = newGameState
                     if (StateSearcher.terminalTest(game)) {
-                        gameOver = true
                         repeat = false
                         rerender()
                         return@addTimer
