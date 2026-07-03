@@ -5,22 +5,16 @@ import ca.isaaclauzon.abalone.model.search.StateSearcher
 import ca.isaaclauzon.abalone.model.LetterCoordinate as L
 import ca.isaaclauzon.abalone.model.NumberCoordinate as N
 import com.varabyte.kotter.foundation.input.*
-import com.varabyte.kotter.foundation.text.ColorLayer.BG
-import com.varabyte.kotter.foundation.text.black
 import com.varabyte.kotter.foundation.text.blue
 import com.varabyte.kotter.foundation.text.clearColor
-import com.varabyte.kotter.foundation.text.color
 import com.varabyte.kotter.foundation.text.green
 import com.varabyte.kotter.foundation.text.invert
 import com.varabyte.kotter.foundation.text.red
-import com.varabyte.kotter.foundation.text.rgb
 import com.varabyte.kotter.foundation.text.text
 import com.varabyte.kotter.foundation.text.textLine
 import com.varabyte.kotter.foundation.text.underline
-import com.varabyte.kotter.foundation.text.white
 import com.varabyte.kotter.runtime.Session
 import com.varabyte.kotter.runtime.render.RenderScope
-import com.varabyte.kotter.runtime.terminal.Terminal
 import com.varabyte.kotterx.grid.Cols
 import com.varabyte.kotterx.grid.GridCharacters
 import com.varabyte.kotterx.grid.grid

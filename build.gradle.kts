@@ -18,6 +18,7 @@ kotlin {
     sourceSets {
         main {
             kotlin.srcDir("src")
+            resources.srcDir("src/resources")
         }
     }
 }

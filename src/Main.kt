@@ -13,6 +13,10 @@ import ca.isaaclauzon.abalone.tui.Renderer.Screens.Companion.game as gameScreen
 import ca.isaaclauzon.abalone.tui.Renderer.Screens.Companion.help as helpScreen
 import ca.isaaclauzon.abalone.tui.Renderer.Screens.Companion.settings as settingsScreen
 
+enum class Page {
+    GAME, HELP
+}
+
 fun main() {
     session(
         terminal = listOf(
@@ -21,6 +25,7 @@ fun main() {
         ).firstSuccess(),
         clearTerminal = true,
     ) {
+
         val settings = settingsScreen()
 
         var game = StateRepresentation(
@@ -41,13 +46,12 @@ fun main() {
         var lastBlink = System.currentTimeMillis()
         var blinkOn by liveVarOf(false)
 
-        var helpMenuShowing by liveVarOf(false)
+        var pageShowing = Page.GAME
 
         section {
-            if (helpMenuShowing) {
-                helpScreen()
-            } else {
-                gameScreen(game, suggestions, settings, inputStr, blinkOn, lastAction)
+            when (pageShowing) {
+                Page.GAME -> gameScreen(game, suggestions, settings, inputStr, blinkOn, lastAction)
+                Page.HELP -> helpScreen()
             }
         }.runUntilSignal {
 
@@ -56,7 +60,7 @@ fun main() {
             onKeyPressed {
                 when (key) {
                     Keys.Enter -> {
-                        if (helpMenuShowing) return@onKeyPressed
+                        if (pageShowing != Page.GAME) return@onKeyPressed
                         val lexed = Lexer.move(inputStr)
                         if (lexed != null) {
                             val action = Parser.action(game, lexed)
@@ -68,14 +72,14 @@ fun main() {
                         }
                     }
 
-                    Keys.Escape -> helpMenuShowing = !helpMenuShowing
+                    Keys.Escape -> pageShowing = if (pageShowing == Page.GAME) Page.HELP else Page.GAME
 
                     Keys.Q -> signal()
 
                     Keys.T -> Renderer.toggleColours()
 
                     else -> {
-                        if (helpMenuShowing) return@onKeyPressed
+                        if (pageShowing != Page.GAME) return@onKeyPressed
                         val str: String
                         if (key == Keys.Backspace) {
                             inputStr = inputStr.dropLast(1)
