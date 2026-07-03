@@ -8,7 +8,7 @@ Abalone is a marble-based board game in which two players are competing to push 
 
 Requires Java 8 or newer.
 ```
-java -jar abalone_1_0_0.jar
+java -jar abalone.jar
 ```
 
 ## Building from source
