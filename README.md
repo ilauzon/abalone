@@ -1,8 +1,8 @@
 # Abalone
 
-An Abalone bot using adversarial game theory.
+An Abalone bot implemented with alpha-beta search and associated optimizations.
 
-Abalone is a marble-based board game in which two players are competing to push each other’s marbles off a hexagonal grid.
+<img src="readme_assets/gameplay.gif">
 
 ## Running the game program
 
