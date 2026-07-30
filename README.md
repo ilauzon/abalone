@@ -6,7 +6,7 @@ An Abalone bot implemented with alpha-beta search and associated optimizations.
 
 ## Running the game program
 
-Requires Java 11 or newer.
+Download abalone.jar from the [Releases](https://github.com/ilauzon/abalone/releases) section. Requires Java 11 or newer.
 ```
 java -jar abalone.jar
 ```
