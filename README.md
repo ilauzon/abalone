@@ -6,7 +6,7 @@ An Abalone bot implemented with alpha-beta search and associated optimizations.
 
 ## Running the game program
 
-Requires Java 8 or newer.
+Requires Java 11 or newer.
 ```
 java -jar abalone.jar
 ```
@@ -14,8 +14,7 @@ java -jar abalone.jar
 ## Building from source
 
 ### Dependencies
-- JRE == 21.*
-- JDK >= 21
+- JDK == 21.*
 
 ### Instructions
 
